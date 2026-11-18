@@ -123,4 +123,45 @@ export function freeShippingRemaining(): number {
   return Math.max(FREE_SHIPPING_THRESHOLD - getSubtotal(), 0);
 }
 
+// Mock promo code — one code only, demo store. The code lives in
+// localStorage so the drawer and the checkout summary agree.
+export const PROMO_CODE = 'AURA10';
+export const PROMO_RATE = 0.1;
+const PROMO_KEY = 'aura-promo';
+
+export function getPromoCode(): string {
+  try {
+    return localStorage.getItem(PROMO_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+// Returns true only for the valid code; anything else clears the promo.
+export function applyPromo(code: string): boolean {
+  const ok = code.trim().toUpperCase() === PROMO_CODE;
+  try {
+    if (ok) localStorage.setItem(PROMO_KEY, PROMO_CODE);
+    else localStorage.removeItem(PROMO_KEY);
+  } catch {
+    // Private mode: promo applies for this session only.
+  }
+  notify();
+  return ok;
+}
+
+export function clearPromo() {
+  try {
+    localStorage.removeItem(PROMO_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+  notify();
+}
+
+// 10% off the subtotal when the promo is applied, rounded to dollars.
+export function getDiscount(): number {
+  return getPromoCode() ? Math.round(getSubtotal() * PROMO_RATE) : 0;
+}
+
 export { products };

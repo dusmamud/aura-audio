@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+---
+<Layout
+  title="Your wishlist — AURA"
+  description="Products you saved for later in the AURA demo store. Saved in your browser only — nothing is sent anywhere."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Wishlist' }]} />
+
+  <section class="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6" aria-labelledby="wishlist-heading">
+    <h1 id="wishlist-heading" class="text-3xl font-semibold tracking-tight sm:text-4xl">Your wishlist</h1>
+    <p class="mt-2 text-sm text-grey">Saved in this browser only — a demo wishlist, nothing is sent anywhere.</p>
+
+    <!-- Empty state -->
+    <div id="wishlist-empty" class="hidden py-16 text-center">
+      <p class="text-lg font-medium">Your wishlist is empty.</p>
+      <p class="mt-2 text-sm text-grey">Tap the heart on any product to save it here for later.</p>
+      <a href="/products/" class="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink-soft">Shop products</a>
+    </div>
+
+    <!-- Saved products — rendered client-side from localStorage -->
+    <div id="wishlist-grid" class="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"></div>
+  </section>
+
+  <script>
+    import { getSlugs, subscribe } from '../scripts/wishlist';
+    import { getProduct, formatPrice } from '../data/site';
+
+    const grid = document.getElementById('wishlist-grid');
+    const emptyEl = document.getElementById('wishlist-empty');
+
+    function render() {
+      if (!grid || !emptyEl) return;
+      const slugs = getSlugs();
+      if (slugs.length === 0) {
+        grid.innerHTML = '';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+      emptyEl.classList.add('hidden');
+      grid.innerHTML = slugs
+        .map((slug) => {
+          const p = getProduct(slug);
+          if (!p) return '';
+          return `
+          <article class="product-card flex flex-col rounded-2xl bg-card p-3 sm:p-4">
+            <div class="relative overflow-hidden rounded-xl bg-card">
+              <a href="/products/${p.slug}/" aria-label="${p.name}">
+                <img src="/images/${p.img}-640.jpg" alt="${p.alt}" width="640" height="640" loading="lazy" decoding="async" class="aspect-square w-full object-cover" />
+              </a>
+              <button type="button" data-wishlist-remove="${p.slug}" aria-label="Remove ${p.name} from wishlist" class="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-white/90 ring-1 ring-black/5 transition hover:scale-105">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+            <h3 class="mt-3 text-sm font-medium"><a href="/products/${p.slug}/" class="transition hover:underline">${p.name}</a></h3>
+            <p class="mt-0.5 text-xs text-grey">${p.tagline}</p>
+            <p class="mt-2 text-sm font-medium">${formatPrice(p.price)}</p>
+            <button type="button" data-wishlist-move="${p.slug}" class="mt-3 w-full rounded-full bg-ink py-2.5 text-[13px] font-medium text-white transition hover:bg-ink-soft">Move to bag</button>
+          </article>`;
+        })
+        .join('');
+    }
+
+    render();
+    subscribe(render);
+  </script>
+</Layout>

@@ -16,7 +16,14 @@
 @font-face { font-family: "Inter"; src: url("/fonts/inter-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: "Inter"; src: url("/fonts/inter-700.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
 
-html { scroll-behavior: smooth; }
+/* Anchor targets must clear the fixed announcement bar + header
+   (~87px mobile, ~95px desktop) — without this, jumps to #products or
+   /support/#shipping land hidden underneath. Lenis smooth-scroll uses
+   the same offset in motion.ts. */
+html { scroll-behavior: smooth; scroll-padding-top: 104px; }
+@media (min-width: 768px) {
+  html { scroll-padding-top: 112px; }
+}
 html, body { overflow-x: clip; }
 body { background: #f5f5f4; color: #0b0b0b; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 ::selection { background: #0b0b0b; color: #f5f5f4; }
@@ -65,6 +72,16 @@ body { background: #f5f5f4; color: #0b0b0b; font-family: var(--font-sans); -webk
 /* Accordion chevron rotates when its item is open (motion.ts toggles .open). */
 [data-accordion-chevron] { transition: transform 0.3s ease; }
 [data-accordion-item].open [data-accordion-chevron] { transform: rotate(180deg); }
+
+/* Wishlist heart fills when the product is saved (motion.ts toggles
+   .wishlisted). */
+[data-wishlist-toggle].wishlisted svg { fill: currentColor; }
+
+/* When the cookie banner is showing, lift back-to-top above it; when
+   the mobile PDP sticky bar is showing, hide back-to-top entirely so
+   the two never stack. motion.ts toggles both classes on <html>. */
+html.cookie-visible #back-to-top.show { bottom: 8.5rem; }
+html.sticky-bar-visible #back-to-top.show { opacity: 0; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

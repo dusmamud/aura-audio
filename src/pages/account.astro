@@ -1,0 +1,177 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+---
+<Layout
+  title="Your account — AURA"
+  description="Your mock AURA account — orders and wishlist, demo only."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Your account' }]} />
+
+  <section class="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6" aria-labelledby="account-heading">
+    <!-- Not signed in -->
+    <div id="account-signed-out" class="hidden">
+      <div class="mx-auto max-w-md rounded-2xl bg-card p-6 sm:p-8">
+        <h1 id="account-heading" class="text-center text-3xl font-semibold tracking-tight">Your account</h1>
+        <p class="mt-2 text-center text-sm leading-relaxed text-grey">Sign in to see your mock orders and wishlist. Demo only — any name and email work.</p>
+        <form id="signin-form" class="mt-6 space-y-4" novalidate>
+          <label class="block">
+            <span class="text-xs font-medium text-ink-soft">Full name</span>
+            <input name="name" type="text" required placeholder="Asha Verma" autocomplete="name" class="mt-1 w-full rounded-xl bg-white px-4 py-3 text-sm outline-none ring-1 ring-black/10 focus:ring-ink/40" />
+          </label>
+          <label class="block">
+            <span class="text-xs font-medium text-ink-soft">Email</span>
+            <input name="email" type="email" required placeholder="you@example.com" autocomplete="email" class="mt-1 w-full rounded-xl bg-white px-4 py-3 text-sm outline-none ring-1 ring-black/10 focus:ring-ink/40" />
+          </label>
+          <label class="block">
+            <span class="text-xs font-medium text-ink-soft">Password (demo — any value works, never stored or sent)</span>
+            <input name="password" type="password" placeholder="Anything — it is not stored" autocomplete="off" class="mt-1 w-full rounded-xl bg-white px-4 py-3 text-sm outline-none ring-1 ring-black/10 focus:ring-ink/40" />
+          </label>
+          <button type="submit" class="w-full rounded-full bg-ink px-6 py-3.5 text-sm font-medium text-white transition hover:bg-ink-soft">Sign in</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Signed in -->
+    <div id="account-signed-in" class="hidden">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Hello, <span id="account-first-name"></span></h1>
+          <p id="account-email" class="mt-2 break-words text-sm text-grey"></p>
+        </div>
+        <button type="button" id="signout-button" class="shrink-0 rounded-full bg-white px-6 py-3 text-sm font-medium ring-1 ring-black/10 transition hover:bg-mist-2">Sign out</button>
+      </div>
+
+      <div class="mt-8 grid gap-10 lg:grid-cols-[1fr_320px]">
+        <div>
+          <h2 class="text-lg font-semibold tracking-tight">Order history</h2>
+          <div id="orders-empty" class="hidden py-10 text-center">
+            <p class="text-base font-medium">No mock orders yet.</p>
+            <p class="mt-2 text-sm text-grey">Your mock orders will appear here after checkout.</p>
+            <a href="/products/" class="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink-soft">Shop products</a>
+          </div>
+          <ul id="orders-list" class="mt-4 space-y-4"></ul>
+        </div>
+
+        <aside class="h-fit rounded-2xl bg-card p-5 lg:sticky lg:top-28">
+          <h2 class="text-base font-semibold tracking-tight">Your wishlist</h2>
+          <p class="mt-2 text-sm text-grey"><span id="wishlist-count" class="font-medium text-ink">0</span> <span id="wishlist-label">items</span> saved</p>
+          <a href="/wishlist/" class="mt-4 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink-soft">View wishlist</a>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    import { getAccount, signIn, signOut } from '../scripts/account';
+    import { getOrders } from '../scripts/orders';
+    import { getCount } from '../scripts/wishlist';
+    import { formatPrice } from '../data/site';
+
+    const account = getAccount();
+    const signedOutEl = document.getElementById('account-signed-out');
+    const signedInEl = document.getElementById('account-signed-in');
+
+    if (!account) {
+      signedOutEl?.classList.remove('hidden');
+      const form = document.getElementById('signin-form') as HTMLFormElement | null;
+      form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        const name = (form.querySelector('input[name="name"]') as HTMLInputElement)?.value.trim();
+        const email = (form.querySelector('input[name="email"]') as HTMLInputElement)?.value.trim();
+        if (!name || !email) return;
+        signIn(name, email);
+        location.reload();
+      });
+    } else {
+      signedInEl?.classList.remove('hidden');
+      const firstName = account.name.trim().split(/\s+/)[0] ?? account.name;
+      const firstNameEl = document.getElementById('account-first-name');
+      if (firstNameEl) firstNameEl.textContent = firstName;
+      const emailEl = document.getElementById('account-email');
+      if (emailEl) emailEl.textContent = account.email;
+
+      document.getElementById('signout-button')?.addEventListener('click', () => {
+        signOut();
+        location.reload();
+      });
+
+      // Wishlist.
+      const count = getCount();
+      const countEl = document.getElementById('wishlist-count');
+      if (countEl) countEl.textContent = String(count);
+      const labelEl = document.getElementById('wishlist-label');
+      if (labelEl) labelEl.textContent = count === 1 ? 'item' : 'items';
+
+      // Order history, newest first (getOrders() already sorts that way).
+      const orders = getOrders();
+      const emptyEl = document.getElementById('orders-empty');
+      const listEl = document.getElementById('orders-list');
+      if (orders.length === 0) {
+        emptyEl?.classList.remove('hidden');
+      } else if (listEl) {
+        const dateFmt = new Intl.DateTimeFormat('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+        for (const order of orders) {
+          const card = document.createElement('li');
+          card.className = 'rounded-2xl bg-card p-5';
+
+          const head = document.createElement('div');
+          head.className = 'flex flex-wrap items-baseline justify-between gap-2';
+          const orderNo = document.createElement('p');
+          orderNo.className = 'break-all font-mono text-sm font-medium';
+          orderNo.textContent = order.orderNo;
+          const date = document.createElement('p');
+          date.className = 'text-sm text-grey';
+          date.textContent = dateFmt.format(new Date(order.date));
+          head.append(orderNo, date);
+          card.append(head);
+
+          const items = document.createElement('ul');
+          items.className = 'mt-4 space-y-2 border-t border-line pt-4';
+          for (const item of order.items) {
+            const li = document.createElement('li');
+            li.className = 'flex items-baseline justify-between gap-3 text-sm';
+            const name = document.createElement('span');
+            name.className = 'min-w-0';
+            name.textContent = `${item.name} × ${item.qty}`;
+            const price = document.createElement('span');
+            price.className = 'shrink-0 font-medium';
+            price.textContent = formatPrice(item.price * item.qty);
+            li.append(name, price);
+            items.append(li);
+          }
+          card.append(items);
+
+          const foot = document.createElement('div');
+          foot.className = 'mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4';
+          const total = document.createElement('p');
+          total.className = 'text-sm';
+          const totalLabel = document.createElement('span');
+          totalLabel.className = 'text-grey';
+          totalLabel.textContent = 'Total ';
+          const totalValue = document.createElement('span');
+          totalValue.className = 'font-semibold';
+          totalValue.textContent = formatPrice(order.total);
+          total.append(totalLabel, totalValue);
+          const track = document.createElement('a');
+          track.className = 'text-sm font-medium underline underline-offset-4 transition hover:text-grey';
+          track.href = `/track/?order=${encodeURIComponent(order.orderNo)}`;
+          track.textContent = 'Track order';
+          foot.append(total, track);
+          card.append(foot);
+
+          listEl.append(card);
+        }
+      }
+    }
+  </script>
+</Layout>

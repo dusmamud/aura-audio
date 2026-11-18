@@ -11,6 +11,7 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
   <section class="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6" aria-labelledby="checkout-heading">
     <h1 id="checkout-heading" class="text-3xl font-semibold tracking-tight sm:text-4xl">Checkout</h1>
     <p class="mt-2 text-sm text-grey">Demo checkout — no payment is processed and nothing is shipped. Do not enter real card details.</p>
+    <p class="mt-1 text-sm text-grey">No account needed — checkout as guest. Your receipt is a mock email; nothing is sent.</p>
 
     <!-- Empty cart state -->
     <div id="checkout-empty" class="hidden py-16 text-center">
@@ -27,7 +28,11 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
       <h2 class="mt-5 text-2xl font-semibold tracking-tight">Order placed — thank you.</h2>
       <p class="mt-2 text-sm text-grey">Order number <span id="order-number" class="font-medium text-ink"></span></p>
       <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-grey">This is a demo store, so no payment was taken and nothing will ship. A confirmation would normally arrive by email within minutes.</p>
-      <a href="/products/" class="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink-soft">Continue shopping</a>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a id="track-order-link" href="/track/" class="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink-soft">Track your order</a>
+        <a href="/account/" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium ring-1 ring-black/10 transition hover:ring-ink">View in your account</a>
+      </div>
+      <a href="/products/" class="mt-4 inline-block text-sm text-grey underline-offset-4 transition hover:text-ink hover:underline">Continue shopping</a>
     </div>
 
     <!-- Checkout flow -->
@@ -113,6 +118,7 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
         <ul id="summary-lines" class="mt-4 space-y-3"></ul>
         <dl class="mt-4 space-y-2 border-t border-line pt-4 text-sm">
           <div class="flex justify-between"><dt class="text-grey">Subtotal</dt><dd id="summary-subtotal" class="font-medium">$0</dd></div>
+          <div id="summary-discount-row" class="hidden justify-between"><dt class="text-grey">Promo <span id="summary-discount-code"></span></dt><dd id="summary-discount" class="font-medium">−$0</dd></div>
           <div class="flex justify-between"><dt class="text-grey">Shipping</dt><dd id="summary-shipping" class="font-medium">—</dd></div>
           <div class="flex justify-between border-t border-line pt-2 text-base"><dt class="font-semibold">Total</dt><dd id="summary-total" class="font-semibold">$0</dd></div>
         </dl>
@@ -122,7 +128,9 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
   </section>
 
   <script>
-    import { getResolvedLines, getSubtotal, clearCart, FREE_SHIPPING_THRESHOLD } from '../scripts/cart';
+    import confetti from 'canvas-confetti';
+    import { getResolvedLines, getSubtotal, clearCart, FREE_SHIPPING_THRESHOLD, getDiscount, getPromoCode } from '../scripts/cart';
+    import { saveOrder, makeOrderNo } from '../scripts/orders';
     import { formatPrice } from '../data/site';
 
     const lines = getResolvedLines();
@@ -152,14 +160,23 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
           .join('');
       }
       const subtotal = getSubtotal();
-      const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 9;
+      const discount = getDiscount();
+      const afterDiscount = subtotal - discount;
+      const shipping = afterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : 9;
       const setText = (id: string, v: string) => {
         const el = document.getElementById(id);
         if (el) el.textContent = v;
       };
       setText('summary-subtotal', formatPrice(subtotal));
+      const discountRow = document.getElementById('summary-discount-row');
+      if (discountRow && discount > 0) {
+        discountRow.classList.remove('hidden');
+        discountRow.classList.add('flex');
+        setText('summary-discount-code', `(${getPromoCode()})`);
+        setText('summary-discount', `−${formatPrice(discount)}`);
+      }
       setText('summary-shipping', shipping === 0 ? 'Free' : formatPrice(shipping));
-      setText('summary-total', formatPrice(subtotal + shipping));
+      setText('summary-total', formatPrice(afterDiscount + shipping));
 
       // Steps.
       const step1 = document.getElementById('step-1') as HTMLFormElement | null;
@@ -204,14 +221,37 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
             return;
           }
         }
-        const orderNo = `AUR-${Math.floor(100000 + Math.random() * 900000)}`;
+        const orderNo = makeOrderNo();
         const orderEl = document.getElementById('order-number');
         if (orderEl) orderEl.textContent = orderNo;
+        // Save the mock order so /track/ and /account/ can show it.
+        const name = (step1.querySelector('input[name="name"]') as HTMLInputElement)?.value ?? '';
+        const email = (step1.querySelector('input[name="email"]') as HTMLInputElement)?.value ?? '';
+        const orderSubtotal = getSubtotal();
+        const orderDiscount = getDiscount();
+        const orderAfterDiscount = orderSubtotal - orderDiscount;
+        const orderShipping = orderAfterDiscount >= FREE_SHIPPING_THRESHOLD ? 0 : 9;
+        saveOrder({
+          orderNo,
+          date: new Date().toISOString(),
+          items: getResolvedLines().map((l) => ({ slug: l.slug, name: l.name, color: l.color, qty: l.qty, price: l.price })),
+          subtotal: orderSubtotal,
+          discount: orderDiscount,
+          shipping: orderShipping,
+          total: orderAfterDiscount + orderShipping,
+          email,
+          name,
+        });
+        const trackLink = document.getElementById('track-order-link') as HTMLAnchorElement | null;
+        if (trackLink) trackLink.href = `/track/?order=${orderNo}`;
         clearCart();
         flowEl?.classList.add('hidden');
         successEl?.classList.remove('hidden');
         ind(3);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          confetti({ particleCount: 120, spread: 75, origin: { y: 0.6 } });
+        }
       });
     }
   </script>

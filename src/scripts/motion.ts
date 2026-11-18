@@ -17,8 +17,13 @@ import { animate } from 'motion';
 import {
   addToCart, setQty, removeLine, getResolvedLines, getCount, getSubtotal,
   freeShippingProgress, freeShippingRemaining, subscribe, FREE_SHIPPING_THRESHOLD,
+  getPromoCode, getDiscount, applyPromo, clearPromo, PROMO_CODE,
 } from './cart';
-import { formatPrice, getProduct } from '../data/site';
+import {
+  getSlugs as getWishlistSlugs, getCount as getWishlistCount, isWishlisted,
+  toggleWishlist, removeFromWishlist, subscribe as subscribeWishlist,
+} from './wishlist';
+import { formatPrice, getProduct, products } from '../data/site';
 
 declare global {
   interface Window {
@@ -59,6 +64,12 @@ function renderCart() {
   const shipText = $('#cart-shipping-text');
   const shipBar = $('#cart-shipping-bar');
   const subtotalEl = $('#cart-subtotal');
+  const discountRow = $('#cart-discount-row');
+  const discountEl = $('#cart-discount');
+  const discountCodeEl = $('#cart-discount-code');
+  const totalEl = $('#cart-total');
+  const upsellWrap = $('#cart-upsell-wrap');
+  const upsellEl = $('#cart-upsell');
   if (!itemsEl || !emptyEl || !footerEl) return;
 
   if (lines.length === 0) {
@@ -66,6 +77,7 @@ function renderCart() {
     emptyEl.classList.remove('hidden');
     emptyEl.classList.add('flex');
     footerEl.classList.add('hidden');
+    if (upsellWrap) upsellWrap.classList.add('hidden');
     if (shipText) shipText.textContent = `Free shipping on orders over ${formatPrice(FREE_SHIPPING_THRESHOLD)}.`;
     if (shipBar) shipBar.style.width = '0%';
     return;
@@ -90,9 +102,9 @@ function renderCart() {
           </div>
           <div class="mt-2 flex items-center justify-between">
             <div class="flex items-center rounded-full ring-1 ring-black/10">
-              <button type="button" data-cart-dec="${l.slug}" data-color="${l.color}" aria-label="Decrease quantity" class="grid h-7 w-7 place-items-center rounded-full transition hover:bg-ink/5">−</button>
+              <button type="button" data-cart-dec="${l.slug}" data-color="${l.color}" aria-label="Decrease quantity" class="grid h-11 w-11 place-items-center rounded-full transition hover:bg-ink/5">−</button>
               <span class="w-7 text-center text-xs font-medium">${l.qty}</span>
-              <button type="button" data-cart-inc="${l.slug}" data-color="${l.color}" aria-label="Increase quantity" class="grid h-7 w-7 place-items-center rounded-full transition hover:bg-ink/5">+</button>
+              <button type="button" data-cart-inc="${l.slug}" data-color="${l.color}" aria-label="Increase quantity" class="grid h-11 w-11 place-items-center rounded-full transition hover:bg-ink/5">+</button>
             </div>
             <button type="button" data-cart-remove="${l.slug}" data-color="${l.color}" class="text-xs text-grey underline-offset-2 transition hover:text-ink hover:underline">Remove</button>
           </div>
@@ -100,7 +112,17 @@ function renderCart() {
       </article>`,
     )
     .join('');
-  if (subtotalEl) subtotalEl.textContent = formatPrice(getSubtotal());
+  const subtotal = getSubtotal();
+  const discount = getDiscount();
+  if (subtotalEl) subtotalEl.textContent = formatPrice(subtotal);
+  if (discountRow && discountEl && discountCodeEl && totalEl) {
+    const hasDiscount = discount > 0;
+    discountRow.classList.toggle('hidden', !hasDiscount);
+    discountRow.classList.toggle('flex', hasDiscount);
+    discountEl.textContent = `−${formatPrice(discount)}`;
+    discountCodeEl.textContent = `(${getPromoCode()})`;
+    totalEl.textContent = formatPrice(subtotal - discount);
+  }
   const remaining = freeShippingRemaining();
   if (shipText) {
     shipText.textContent =
@@ -109,14 +131,80 @@ function renderCart() {
         : 'You have unlocked free shipping.';
   }
   if (shipBar) shipBar.style.width = `${Math.round(freeShippingProgress() * 100)}%`;
+
+  // Cross-sell: top-rated products not already in the bag.
+  if (upsellWrap && upsellEl) {
+    const inBag = new Set(lines.map((l) => l.slug));
+    const upsell = products
+      .filter((p) => !inBag.has(p.slug))
+      .sort((a, b) => b.rating - a.rating || b.reviewsCount - a.reviewsCount)
+      .slice(0, 2);
+    if (upsell.length === 0) {
+      upsellWrap.classList.add('hidden');
+    } else {
+      upsellWrap.classList.remove('hidden');
+      upsellEl.innerHTML = upsell
+        .map(
+          (p) => `
+          <div class="flex items-center gap-3">
+            <a href="/products/${p.slug}/" data-close-cart class="shrink-0 overflow-hidden rounded-xl bg-card">
+              <img src="/images/${p.img}-640.jpg" alt="" width="56" height="56" class="h-14 w-14 object-cover" loading="lazy" decoding="async" />
+            </a>
+            <div class="min-w-0 flex-1">
+              <a href="/products/${p.slug}/" data-close-cart class="block truncate text-sm font-medium hover:underline">${p.name}</a>
+              <p class="mt-0.5 text-xs text-grey">${formatPrice(p.price)}</p>
+            </div>
+            <button type="button" data-add-to-bag="${p.slug}" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-xs font-medium text-white transition hover:bg-ink-soft">Add</button>
+          </div>`,
+        )
+        .join('');
+    }
+  }
 }
 
 let lenis: Lenis | null = null;
+
+// ---------- focus trap (drawer, search, lightbox) ----------
+// Tab must cycle inside the open overlay and never reach the page
+// behind it. The element that opened the overlay gets focus back.
+let lastFocus: HTMLElement | null = null;
+
+function focusables(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(
+    'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+  )].filter((el) => el.offsetParent !== null);
+}
+
+function trapTab(e: KeyboardEvent, container: HTMLElement) {
+  if (e.key !== 'Tab') return;
+  const items = focusables(container);
+  if (items.length === 0) {
+    e.preventDefault();
+    return;
+  }
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function returnFocus(fallbackSel: string) {
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  else $(fallbackSel)?.focus();
+  lastFocus = null;
+}
 
 function openCart() {
   const drawer = $('#cart-drawer');
   const backdrop = $('#cart-backdrop');
   if (!drawer || !backdrop) return;
+  if (!drawer.classList.contains('translate-x-full')) return; // already open
+  lastFocus = document.activeElement as HTMLElement | null;
   renderCart();
   drawer.classList.remove('translate-x-full');
   drawer.setAttribute('aria-hidden', 'false');
@@ -124,18 +212,23 @@ function openCart() {
   document.documentElement.style.overflow = 'hidden';
   lenis?.stop();
   drawer.querySelector<HTMLButtonElement>('button')?.focus();
-  if (!reduced()) animate(drawer, { x: ['100%', '0%'] }, { type: 'spring', stiffness: 260, damping: 30 });
+  // The drawer animates via its CSS transition-transform class — no JS
+  // transform animation here: a motion spring writing inline transform
+  // every frame fights the CSS transition and the drawer never settles.
 }
 
 function closeCart() {
   const drawer = $('#cart-drawer');
   const backdrop = $('#cart-backdrop');
   if (!drawer || !backdrop) return;
+  if (drawer.classList.contains('translate-x-full')) return; // already closed
   drawer.classList.add('translate-x-full');
   drawer.setAttribute('aria-hidden', 'true');
   backdrop.classList.add('hidden');
   document.documentElement.style.overflow = '';
   lenis?.start();
+  // Focus always returns to the bag button — the drawer's canonical
+  // trigger — even when the drawer was opened from an Add to bag button.
   $('#bag-btn')?.focus();
 }
 
@@ -190,6 +283,8 @@ function openSearch() {
   const overlay = $('#search-overlay');
   const input = $('#search-input') as HTMLInputElement | null;
   if (!overlay || !input) return;
+  if (!overlay.classList.contains('hidden')) return; // already open
+  lastFocus = document.activeElement as HTMLElement | null;
   renderSearch('');
   overlay.classList.remove('hidden');
   document.documentElement.style.overflow = 'hidden';
@@ -204,10 +299,38 @@ function openSearch() {
 function closeSearch() {
   const overlay = $('#search-overlay');
   if (!overlay) return;
+  if (overlay.classList.contains('hidden')) return; // already closed
   overlay.classList.add('hidden');
   document.documentElement.style.overflow = '';
   lenis?.start();
-  $('#search-btn')?.focus();
+  returnFocus('#search-btn');
+}
+
+// ---------- PDP gallery lightbox ----------
+function openLightbox() {
+  const box = $('#pdp-lightbox');
+  const img = $('#pdp-lightbox-img') as HTMLImageElement | null;
+  const main = $('#pdp-gallery img') as HTMLImageElement | null;
+  if (!box || !img || !main) return;
+  if (!box.classList.contains('hidden')) return;
+  lastFocus = document.activeElement as HTMLElement | null;
+  img.src = main.currentSrc || main.src;
+  img.alt = main.alt;
+  box.classList.remove('hidden');
+  box.classList.add('flex');
+  document.documentElement.style.overflow = 'hidden';
+  lenis?.stop();
+  box.querySelector<HTMLButtonElement>('button')?.focus();
+}
+
+function closeLightbox() {
+  const box = $('#pdp-lightbox');
+  if (!box || box.classList.contains('hidden')) return;
+  box.classList.add('hidden');
+  box.classList.remove('flex');
+  document.documentElement.style.overflow = '';
+  lenis?.start();
+  returnFocus('#pdp-gallery');
 }
 
 // ---------- scroll reveals + parallax (per page) ----------
@@ -292,11 +415,158 @@ function toggleAccordion(btn: HTMLButtonElement) {
   }
 }
 
+// ---------- wishlist ----------
+function renderWishlist() {
+  const badge = $('#wishlist-count');
+  const count = getWishlistCount();
+  if (badge) {
+    badge.textContent = String(count);
+    badge.classList.toggle('hidden', count === 0);
+    badge.classList.toggle('grid', count > 0);
+  }
+  document.querySelectorAll<HTMLElement>('[data-wishlist-toggle]').forEach((btn) => {
+    const slug = btn.dataset.wishlistToggle ?? '';
+    const saved = isWishlisted(slug);
+    btn.setAttribute('aria-pressed', String(saved));
+    btn.classList.toggle('wishlisted', saved);
+  });
+}
+
+// ---------- PDP delivery estimate (mock, computed from today's date) ----------
+function renderDeliveryEstimate() {
+  const el = $('#delivery-estimate');
+  if (!el) return;
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setHours(18, 0, 0, 0);
+  let target = cutoff;
+  if (now > cutoff) {
+    target = new Date(cutoff);
+    target.setDate(target.getDate() + 1);
+  }
+  const mins = Math.max(1, Math.round((target.getTime() - now.getTime()) / 60000));
+  const hrs = Math.floor(mins / 60);
+  const remain = mins % 60;
+  const arrival = new Date(now);
+  arrival.setDate(arrival.getDate() + 3);
+  const dateStr = arrival.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  el.textContent = `Order within ${hrs} hrs ${remain} min — arrives ${dateStr} · demo estimate`;
+}
+
+// ---------- recently viewed (localStorage, max 4, most-recent-first) ----------
+const RECENT_KEY = 'aura-recently-viewed';
+
+function readRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+    return Array.isArray(parsed) ? parsed.filter((s) => getProduct(s)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderRecentlyViewed() {
+  const wrap = $('[data-recently-viewed]');
+  const list = $('[data-recently-viewed-list]');
+  if (!wrap || !list) return;
+  const current = document.querySelector<HTMLElement>('[data-pdp-slug]')?.dataset.pdpSlug;
+  const slugs = readRecent().filter((s) => s !== current).slice(0, 4);
+  if (slugs.length === 0) {
+    wrap.classList.add('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  list.innerHTML = slugs
+    .map((slug) => {
+      const p = getProduct(slug);
+      if (!p) return '';
+      return `
+      <article class="product-card rounded-2xl bg-card p-3 sm:p-4">
+        <div class="overflow-hidden rounded-xl bg-card">
+          <a href="/products/${p.slug}/" aria-label="${p.name}">
+            <img src="/images/${p.img}-640.jpg" alt="${p.alt}" width="640" height="640" loading="lazy" decoding="async" class="aspect-square w-full object-cover" />
+          </a>
+        </div>
+        <h3 class="mt-3 text-sm font-medium"><a href="/products/${p.slug}/" class="transition hover:underline">${p.name}</a></h3>
+        <p class="mt-1 text-sm text-grey">${formatPrice(p.price)}</p>
+      </article>`;
+    })
+    .join('');
+}
+
+// ---------- cookie banner ----------
+function setupCookieBanner() {
+  const banner = $('#cookie-banner');
+  if (!banner) return;
+  let choice = '';
+  try {
+    choice = localStorage.getItem('aura-consent') ?? '';
+  } catch {
+    choice = '';
+  }
+  if (!choice) {
+    banner.classList.remove('hidden');
+    banner.dataset.pending = '1';
+    document.documentElement.classList.add('cookie-visible');
+  }
+}
+
+function dismissCookieBanner(choice: string) {
+  const banner = $('#cookie-banner');
+  if (!banner) return;
+  try {
+    localStorage.setItem('aura-consent', choice);
+  } catch {
+    // Private mode: banner returns next visit.
+  }
+  banner.classList.add('hidden');
+  banner.dataset.pending = '0';
+  document.documentElement.classList.remove('cookie-visible');
+}
+
+// ---------- mobile PDP sticky buy bar ----------
+function setupStickyBar() {
+  const bar = $('#pdp-sticky-bar');
+  const buyBox = $('#pdp-buybox');
+  if (!bar || !buyBox) return;
+  const footer = document.querySelector('footer');
+  const update = () => {
+    const buyBottom = buyBox.getBoundingClientRect().bottom;
+    const footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+    const show = buyBottom < 0 && footerTop > window.innerHeight - 80;
+    bar.classList.toggle('translate-y-full', !show);
+    document.documentElement.classList.toggle('sticky-bar-visible', show);
+    // The cookie banner must never overlap the bar: hide it while the
+    // bar is showing, show it again when the bar hides (if not dismissed).
+    const banner = $('#cookie-banner');
+    if (banner && banner.dataset.pending === '1') banner.classList.toggle('hidden', show);
+  };
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+}
+
 // ---------- per-page init (runs on first load AND every view transition) ----------
 function initPage() {
   renderCart();
+  renderWishlist();
   setupReveals();
   setupAccordions();
+  renderDeliveryEstimate();
+  renderRecentlyViewed();
+  setupCookieBanner();
+  setupStickyBar();
+  // Record this PDP visit for "recently viewed" (before rendering, so
+  // the current product never appears in its own row).
+  const pdpSlug = document.querySelector<HTMLElement>('[data-pdp-slug]')?.dataset.pdpSlug;
+  if (pdpSlug) {
+    try {
+      const recent = [pdpSlug, ...readRecent().filter((s) => s !== pdpSlug)].slice(0, 4);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    } catch {
+      // Private mode: recently viewed is skipped for this session.
+    }
+  }
   // PDP gallery thumbnails: first thumb is active by default.
   document.querySelectorAll<HTMLElement>('[data-gallery-thumb]').forEach((thumb, i) => {
     thumb.classList.toggle('ring-2', i === 0);
@@ -329,6 +599,86 @@ function setupGlobal() {
   // Cart state → badge + drawer, on every change.
   subscribe(renderCart);
 
+  // Wishlist state → header badge + heart buttons, on every change.
+  subscribeWishlist(renderWishlist);
+
+  // Mock forms (promo + newsletter) — handled in the CAPTURE phase on
+  // purpose. Astro's ClientRouter also listens for `submit` on document
+  // (bubble phase) and turns any un-prevented form submission into a view
+  // transition; a bubble-phase handler registered after the router's runs
+  // too late and the page swaps underneath the user (the drawer closes,
+  // the toast vanishes). Capture runs first, so preventDefault +
+  // stopPropagation here keep the router out of these demo forms.
+  document.addEventListener(
+    'submit',
+    (e) => {
+      const form = e.target as HTMLFormElement;
+      if (form.id === 'promo-form') {
+        e.preventDefault();
+        e.stopPropagation();
+        const input = $('#promo-input') as HTMLInputElement | null;
+        const msg = $('#promo-message');
+        if (!input || !msg) return;
+        const code = input.value.trim();
+        if (!code) return;
+        if (applyPromo(code)) {
+          msg.classList.remove('hidden');
+          msg.textContent = `Promo ${PROMO_CODE} applied — 10% off your subtotal.`;
+          msg.classList.remove('text-red-700');
+          msg.classList.add('text-ink');
+          renderCart();
+        } else {
+          msg.classList.remove('hidden');
+          msg.textContent = 'That code is not valid in this demo store. Try AURA10.';
+          msg.classList.add('text-red-700');
+          msg.classList.remove('text-ink');
+        }
+        return;
+      }
+      if (form.id === 'newsletter-form') {
+        e.preventDefault();
+        e.stopPropagation();
+        form.reset();
+        showToast('Thanks for subscribing — welcome to AURA.');
+      }
+    },
+    true,
+  );
+
+  // Escape closes lightbox / drawer / search / mobile menu.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeLightbox();
+      closeCart();
+      closeSearch();
+      $('#mobile-menu')?.classList.add('hidden');
+      $('#menu-btn')?.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    // Focus trap: Tab cycles inside whichever overlay is open.
+    if (e.key === 'Tab') {
+      const lightbox = $('#pdp-lightbox');
+      if (lightbox && !lightbox.classList.contains('hidden')) {
+        trapTab(e, lightbox);
+        return;
+      }
+      const drawer = $('#cart-drawer');
+      if (drawer && !drawer.classList.contains('translate-x-full')) {
+        trapTab(e, drawer);
+        return;
+      }
+      const overlay = $('#search-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        trapTab(e, overlay);
+      }
+    }
+    // Keyboard-open the gallery lightbox (the gallery is focusable).
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).closest?.('[data-lightbox-open]')) {
+      e.preventDefault();
+      openLightbox();
+    }
+  });
+
   // Announcement rotator.
   const annEl = $('#announcement-text');
   const messages: string[] = (() => {
@@ -358,15 +708,6 @@ function setupGlobal() {
   toTop?.addEventListener('click', () => {
     if (lenis) lenis.scrollTo(0, { immediate: reduced() });
     else window.scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
-  });
-
-  // Escape closes drawer / search / mobile menu.
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    closeCart();
-    closeSearch();
-    $('#mobile-menu')?.classList.add('hidden');
-    $('#menu-btn')?.setAttribute('aria-expanded', 'false');
   });
 
   // Delegated clicks — survives view transitions (document persists).
@@ -401,6 +742,57 @@ function setupGlobal() {
     }
     if (closest('[data-close-search]')) {
       closeSearch();
+      return;
+    }
+
+    const wishBtn = closest('[data-wishlist-toggle]');
+    if (wishBtn) {
+      const slug = wishBtn.dataset.wishlistToggle ?? '';
+      const product = getProduct(slug);
+      if (!product) return;
+      const added = toggleWishlist(slug);
+      showToast(added ? `${product.name} saved to your wishlist.` : `${product.name} removed from your wishlist.`);
+      // The wishlist page re-renders itself on store change; nothing else needed.
+      return;
+    }
+
+    const wishMove = closest('[data-wishlist-move]');
+    if (wishMove) {
+      const slug = wishMove.dataset.wishlistMove ?? '';
+      const product = getProduct(slug);
+      if (!product) return;
+      addToCart(slug, 1);
+      removeFromWishlist(slug);
+      showToast(`${product.name} moved to your bag.`);
+      return;
+    }
+
+    const wishRemove = closest('[data-wishlist-remove]');
+    if (wishRemove) {
+      const slug = wishRemove.dataset.wishlistRemove ?? '';
+      const product = getProduct(slug);
+      removeFromWishlist(slug);
+      if (product) showToast(`${product.name} removed from your wishlist.`);
+      return;
+    }
+
+    const consentBtn = closest('[data-consent]');
+    if (consentBtn) {
+      dismissCookieBanner(consentBtn.dataset.consent ?? 'declined');
+      return;
+    }
+
+    const lightboxOpen = closest('[data-lightbox-open]');
+    if (lightboxOpen) {
+      openLightbox();
+      return;
+    }
+    if (closest('[data-lightbox-close]')) {
+      closeLightbox();
+      return;
+    }
+    if ((e.target as HTMLElement).id === 'pdp-lightbox') {
+      closeLightbox();
       return;
     }
 
@@ -519,7 +911,7 @@ function setupGlobal() {
         const target = document.querySelector(id);
         if (target) {
           e.preventDefault();
-          if (lenis) lenis.scrollTo(target as HTMLElement, { offset: -90 });
+          if (lenis) lenis.scrollTo(target as HTMLElement, { offset: -104 });
           else target.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth' });
         }
       }
@@ -530,16 +922,6 @@ function setupGlobal() {
   document.addEventListener('input', (e) => {
     if ((e.target as HTMLElement)?.id === 'search-input') {
       renderSearch((e.target as HTMLInputElement).value);
-    }
-  });
-
-  // Newsletter (mock — no network, toast confirms).
-  document.addEventListener('submit', (e) => {
-    const form = e.target as HTMLFormElement;
-    if (form.id === 'newsletter-form') {
-      e.preventDefault();
-      form.reset();
-      showToast('Thanks for subscribing — welcome to AURA.');
     }
   });
 }

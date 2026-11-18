@@ -67,6 +67,12 @@ const filters = ['All', ...categories];
     <div id="shop-empty" class="hidden rounded-2xl bg-card px-6 py-12 text-center">
       <p class="text-sm font-medium">No products match — try a different search or category.</p>
     </div>
+
+    <!-- Recently viewed — filled client-side from localStorage -->
+    <section data-recently-viewed class="mt-12 hidden" aria-labelledby="recent-heading">
+      <h2 id="recent-heading" class="text-xl font-medium tracking-tight">Recently viewed</h2>
+      <div data-recently-viewed-list class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"></div>
+    </section>
   </section>
 </Layout>
 

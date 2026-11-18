@@ -1,0 +1,251 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Track your order — AURA',
+  description:
+    'Track your mock AURA order. Enter your order number to see its delivery status in this demo store — no real shipment is created.',
+  url: 'https://auraaudioo.pages.dev/track/',
+};
+---
+<Layout
+  title="Track your order — AURA"
+  description="Track your mock AURA order. Enter your order number to see its delivery status in this demo store — no real shipment is created."
+  jsonLd={jsonLd}
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Track your order' }]} />
+
+  <!-- HERO -->
+  <section class="mx-auto max-w-6xl px-4 pb-8 pt-8 sm:px-6 sm:pt-10" aria-labelledby="track-heading">
+    <div class="reveal">
+      <p class="text-xs font-medium uppercase tracking-[0.2em] text-grey">Orders</p>
+      <h1 id="track-heading" class="mt-4 max-w-2xl text-4xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+        Track your order
+      </h1>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-grey">
+        Enter your order number below to see where your order is.
+        This is a demo tracker — no real shipment is created and nothing is sent anywhere.
+      </p>
+    </div>
+  </section>
+
+  <!-- LOOKUP FORM -->
+  <section class="mx-auto max-w-6xl px-4 pb-8 sm:px-6" aria-label="Order lookup">
+    <form id="track-form" class="reveal max-w-xl rounded-2xl bg-card p-6 sm:p-8" novalidate>
+      <label for="order-input" class="text-sm font-medium">Order number</label>
+      <div class="mt-2 flex flex-col gap-3 sm:flex-row">
+        <input
+          id="order-input"
+          name="order"
+          type="text"
+          placeholder="AUR-123456"
+          autocomplete="off"
+          spellcheck="false"
+          class="w-full min-w-0 flex-1 rounded-full bg-white px-4 py-3 text-sm uppercase text-ink ring-1 ring-black/5 outline-none transition placeholder:normal-case placeholder:text-grey focus:ring-2 focus:ring-ink"
+        />
+        <button
+          type="submit"
+          class="inline-flex shrink-0 items-center justify-center rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
+        >
+          Track order
+        </button>
+      </div>
+      <p class="mt-3 text-xs leading-relaxed text-grey">
+        Orders placed in this demo store are saved in your browser — or try a demo order number such as
+        <button type="button" id="hint-demo" class="font-medium text-ink underline decoration-black/20 underline-offset-2 transition hover:text-grey">AUR-482913</button>.
+      </p>
+    </form>
+  </section>
+
+  <!-- RESULT -->
+  <section class="mx-auto max-w-6xl px-4 pb-16 sm:px-6" aria-label="Tracking result">
+    <div id="track-result" class="hidden max-w-xl" aria-live="polite">
+      <div class="rounded-2xl bg-card p-6 sm:p-8">
+        <p id="track-order-line" class="text-xs font-medium uppercase tracking-[0.2em] text-grey"></p>
+        <p id="track-status" class="mt-3 text-xl font-semibold tracking-tight"></p>
+        <ol id="track-timeline" class="mt-6"></ol>
+      </div>
+
+      <!-- Order summary (only for orders found in this browser) -->
+      <div id="order-summary" class="mt-4 hidden rounded-2xl bg-card p-6 sm:p-8"></div>
+    </div>
+
+    <!-- NOT FOUND -->
+    <div id="track-notfound" class="hidden max-w-xl rounded-2xl bg-card p-6 text-center sm:p-8" role="status">
+      <p class="text-base font-medium">We couldn't find that order number in this demo store.</p>
+      <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-grey">
+        Check the number and try again — or try a demo order to see how tracking looks.
+      </p>
+      <button
+        type="button"
+        id="try-demo"
+        class="mt-6 inline-flex items-center justify-center rounded-full bg-ink px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
+      >
+        Try a demo order
+      </button>
+    </div>
+  </section>
+
+  <script>
+    import { findOrder } from '../scripts/orders';
+    import { formatPrice } from '../data/site';
+
+    const STEPS = [
+      { label: 'Ordered', offset: 0 },
+      { label: 'Packed', offset: 1 },
+      { label: 'Shipped', offset: 2 },
+      { label: 'Out for delivery', offset: 4 },
+      { label: 'Delivered', offset: 5 },
+    ];
+    const DEMO_ORDER_NO = 'AUR-482913';
+    const ORDER_RE = /^AUR-\d{6}$/i;
+
+    const form = document.getElementById('track-form') as HTMLFormElement | null;
+    const input = document.getElementById('order-input') as HTMLInputElement | null;
+    const resultEl = document.getElementById('track-result');
+    const notFoundEl = document.getElementById('track-notfound');
+    const orderLineEl = document.getElementById('track-order-line');
+    const statusEl = document.getElementById('track-status');
+    const timelineEl = document.getElementById('track-timeline');
+    const summaryEl = document.getElementById('order-summary');
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const fmtLong = (d: Date) =>
+      d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const addDays = (d: Date, n: number) => {
+      const out = new Date(d);
+      out.setDate(out.getDate() + n);
+      return out;
+    };
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    function showNotFound() {
+      resultEl?.classList.add('hidden');
+      notFoundEl?.classList.remove('hidden');
+    }
+
+    function renderTimeline(baseDate: Date) {
+      if (!timelineEl || !statusEl || !orderLineEl) return;
+      const today = startOfDay(new Date());
+      const base = startOfDay(baseDate);
+      const elapsed = Math.floor((today.getTime() - base.getTime()) / 86400000);
+      const deliveredDate = addDays(base, 5);
+      const doneCount = STEPS.filter((s) => elapsed >= s.offset).length;
+      const allDone = doneCount === STEPS.length;
+      const currentIdx = allDone ? -1 : doneCount; // first not-yet-done step
+      const lastDone = STEPS[Math.max(doneCount - 1, 0)];
+
+      statusEl.textContent = allDone
+        ? `Delivered on ${fmt(deliveredDate)}`
+        : `${lastDone.label} — arriving ${fmt(deliveredDate)}`;
+
+      timelineEl.innerHTML = STEPS.map((step, i) => {
+        const date = addDays(base, step.offset);
+        const done = elapsed >= step.offset;
+        const current = i === currentIdx;
+        const circle = done
+          ? `<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-white"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg></span>`
+          : current
+            ? `<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white ring-2 ring-ink"><span class="h-2.5 w-2.5 rounded-full bg-ink"></span></span>`
+            : `<span class="h-7 w-7 shrink-0 rounded-full bg-white ring-1 ring-black/20"></span>`;
+        const connector =
+          i < STEPS.length - 1
+            ? `<span aria-hidden="true" class="absolute bottom-0 left-[13px] top-8 w-px ${done ? 'bg-ink/30' : 'bg-black/10'}"></span>`
+            : '';
+        return `<li class="relative flex gap-4 pb-6 last:pb-0">
+          ${connector}
+          ${circle}
+          <span class="min-w-0 pt-0.5">
+            <span class="block text-sm font-medium ${done || current ? '' : 'text-grey'}">${step.label}</span>
+            <span class="mt-0.5 block text-sm text-grey">${fmt(date)}</span>
+          </span>
+        </li>`;
+      }).join('');
+    }
+
+    function renderSummary(orderNo: string, order: ReturnType<typeof findOrder>) {
+      if (!summaryEl) return;
+      if (!order) {
+        summaryEl.classList.add('hidden');
+        summaryEl.innerHTML = '';
+        return;
+      }
+      summaryEl.innerHTML = `
+        <h2 class="text-base font-semibold tracking-tight">Order summary</h2>
+        <dl class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between gap-4"><dt class="text-grey">Order number</dt><dd class="font-medium">${esc(order.orderNo)}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-grey">Placed</dt><dd class="font-medium">${fmtLong(new Date(order.date))}</dd></div>
+        </dl>
+        <ul class="mt-4 space-y-3 border-t border-black/5 pt-4">
+          ${order.items
+            .map(
+              (item) => `<li class="flex items-baseline justify-between gap-4 text-sm">
+                <span class="min-w-0"><span class="font-medium">${esc(item.name)}</span> <span class="text-grey">× ${item.qty}</span></span>
+                <span class="shrink-0 font-medium">${formatPrice(item.price * item.qty)}</span>
+              </li>`,
+            )
+            .join('')}
+        </ul>
+        <div class="mt-4 flex justify-between border-t border-black/5 pt-4 text-base">
+          <span class="font-semibold">Total</span><span class="font-semibold">${formatPrice(order.total)}</span>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a href="/account/" class="inline-flex items-center justify-center rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90">View in your account</a>
+          <a href="/products/" class="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-medium ring-1 ring-black/10 transition hover:bg-mist">Continue shopping</a>
+        </div>`;
+      summaryEl.classList.remove('hidden');
+    }
+
+    function lookup(orderNoRaw: string) {
+      const orderNo = orderNoRaw.trim().toUpperCase();
+      if (!orderNo) {
+        showNotFound();
+        return;
+      }
+      const stored = findOrder(orderNo);
+      let baseDate: Date | null = null;
+      if (stored) {
+        baseDate = new Date(stored.date);
+      } else if (ORDER_RE.test(orderNo)) {
+        // Demo fallback: derive a plausible order date from the digits.
+        const digits = orderNo.slice(4);
+        const daysAgo = (digits.split('').reduce((sum, ch) => sum + Number(ch), 0) % 6) + 1;
+        baseDate = addDays(startOfDay(new Date()), -daysAgo);
+      }
+      if (!baseDate || Number.isNaN(baseDate.getTime())) {
+        showNotFound();
+        return;
+      }
+      if (orderLineEl) orderLineEl.textContent = `Order ${orderNo}`;
+      renderTimeline(baseDate);
+      renderSummary(orderNo, stored);
+      notFoundEl?.classList.add('hidden');
+      resultEl?.classList.remove('hidden');
+    }
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input) lookup(input.value);
+    });
+
+    const runDemo = () => {
+      if (input) input.value = DEMO_ORDER_NO;
+      lookup(DEMO_ORDER_NO);
+    };
+    document.getElementById('try-demo')?.addEventListener('click', runDemo);
+    document.getElementById('hint-demo')?.addEventListener('click', runDemo);
+
+    // Prefill from ?order= and auto-run the lookup when present.
+    const param = new URLSearchParams(window.location.search).get('order');
+    if (param && input) {
+      input.value = param.trim();
+      lookup(param);
+    }
+  </script>
+</Layout>

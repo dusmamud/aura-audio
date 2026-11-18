@@ -80,6 +80,9 @@ export interface Product {
   reviewsCount: number;
   badge?: 'New' | 'Bestseller';
   colors: string[];
+  stock: string;
+  lowStock?: boolean;
+  inBox: string[];
   specs: { driver: string; battery: string; anc: string; bluetooth: string; weight: string; charging: string };
   gallery: string[];
   img: string;
@@ -102,6 +105,8 @@ export const products: Product[] = [
     reviewsCount: 214,
     badge: 'Bestseller',
     colors: ['Silver', 'Charcoal'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['AURA One headphones', 'Fabric travel case', 'USB-C charging cable (1.5 m)', '3.5 mm audio cable', 'Quick start guide'],
     specs: {
       driver: '40 mm beryllium',
       battery: '60 hours (ANC on)',
@@ -132,6 +137,8 @@ export const products: Product[] = [
     rating: 4.7,
     reviewsCount: 168,
     colors: ['White', 'Silver'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['Wireless Earbuds', 'Charging case', 'USB-C charging cable', 'Ear tips (S / M / L)', 'Quick start guide'],
     specs: {
       driver: '11 mm dynamic',
       battery: '8 h + 24 h case',
@@ -163,6 +170,8 @@ export const products: Product[] = [
     reviewsCount: 96,
     badge: 'New',
     colors: ['Silver', 'Black'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['Smart Watch', 'Magnetic charging puck', 'Sport band (M / L)', 'Quick start guide'],
     specs: {
       driver: '—',
       battery: '14 days',
@@ -193,6 +202,8 @@ export const products: Product[] = [
     rating: 4.6,
     reviewsCount: 142,
     colors: ['Mist Grey', 'Charcoal'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['Portable Speaker', 'USB-C charging cable', 'Quick start guide'],
     specs: {
       driver: '2 × 50 mm',
       battery: '24 hours',
@@ -223,6 +234,9 @@ export const products: Product[] = [
     rating: 4.5,
     reviewsCount: 87,
     colors: ['Silver'],
+    stock: 'Only 3 left in stock — ships within 1 business day',
+    lowStock: true,
+    inBox: ['Charging Dock', 'USB-C cable', '30 W power adapter', 'Quick start guide'],
     specs: {
       driver: '—',
       battery: '—',
@@ -253,6 +267,8 @@ export const products: Product[] = [
     reviewsCount: 64,
     badge: 'New',
     colors: ['Mist Grey'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['AURA Home speaker', 'Power cable', 'Quick start guide'],
     specs: {
       driver: '76 mm woofer + tweeter',
       battery: '— (mains)',
@@ -284,6 +300,8 @@ export const products: Product[] = [
     reviewsCount: 121,
     badge: 'Bestseller',
     colors: ['White', 'Silver'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['AURA Buds Pro', 'Charging case', 'USB-C charging cable', 'Ear tips (XS / S / M / L)', 'Quick start guide'],
     specs: {
       driver: '12 mm beryllium',
       battery: '9 h + 27 h case',
@@ -314,6 +332,8 @@ export const products: Product[] = [
     rating: 4.7,
     reviewsCount: 203,
     colors: ['Mist Grey', 'Charcoal'],
+    stock: 'In stock — ships within 1 business day',
+    inBox: ['AURA Travel Case', 'Cable organiser pouch', 'Quick start guide'],
     specs: {
       driver: '—',
       battery: '—',
@@ -443,6 +463,28 @@ export const testimonials = [
   { name: 'Ananya Sharma', role: 'Product designer, Mumbai', quote: 'The One is the first headphone I forget I am wearing. Eight hours in, still comfortable, still quiet.', rating: 5, product: 'aura-one' },
   { name: 'Daniel Kim', role: 'Frequent flyer, Seoul', quote: 'Adaptive ANC on a flight is genuinely impressive — the cabin drone just vanishes.', rating: 5, product: 'aura-buds-pro' },
   { name: 'Sara Fernandes', role: 'Fitness coach, Goa', quote: 'Two weeks of battery, workouts tracked every morning, and my music controls are on my wrist. Done.', rating: 5, product: 'aura-watch' },
+];
+
+
+export const community = [
+  {
+    img: 'lifestyle-desk',
+    alt: 'AURA headphones resting on a light desk next to their fabric carrying case',
+    handle: '@mira.listens',
+    quote: 'Morning focus, sorted. The One lives on my desk now.',
+  },
+  {
+    img: 'earcup-closeup',
+    alt: 'Macro close-up of the AURA headphone earcup — brushed aluminium, mesh fabric and USB-C port',
+    handle: '@daniel.flies',
+    quote: 'Cabin drone: gone. These are my flight essential.',
+  },
+  {
+    img: 'exploded-view',
+    alt: 'Exploded view of the AURA headphones — driver, magnet, circuit board and earcup shells',
+    handle: '@sara.trains',
+    quote: 'Buds Pro survive every workout. ANC on, world off.',
+  },
 ];
 
 export const footerShop = [
