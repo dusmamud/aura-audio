@@ -1,0 +1,74 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Picture from '../../components/Picture.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import { articles } from '../../data/site';
+
+export function getStaticPaths() {
+  return articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { article },
+  }));
+}
+
+const { article } = Astro.props;
+const others = articles.filter((a) => a.slug !== article.slug);
+---
+<Layout title={`${article.title} — AURA Journal`} description={article.excerpt}>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Journal', href: '/journal/' }, { label: article.title }]} />
+
+  <!-- HERO -->
+  <article class="mx-auto max-w-6xl px-4 pb-12 pt-8 sm:px-6 sm:pt-10">
+    <div class="reveal overflow-hidden rounded-2xl bg-card">
+      <Picture
+        name={article.img}
+        alt={article.alt}
+        widths={[640, 800, 1280]}
+        sizes="(max-width: 768px) 100vw, 800px"
+        ratio="aspect-[16/9]"
+        eager
+      />
+    </div>
+    <header class="reveal mx-auto mt-8 max-w-2xl text-center">
+      <h1 class="text-3xl font-medium leading-[1.1] tracking-[-0.02em] sm:text-5xl">{article.title}</h1>
+      <p class="mt-4 text-sm text-grey">{article.date} · {article.readTime}</p>
+    </header>
+    <div class="reveal mx-auto mt-8 max-w-2xl space-y-5">
+      {article.body.map((paragraph) => (
+        <p class="text-base leading-relaxed text-grey">{paragraph}</p>
+      ))}
+    </div>
+
+    <!-- READ NEXT -->
+    <section class="mx-auto mt-14 max-w-6xl" aria-labelledby="read-next-heading">
+      <h2 id="read-next-heading" class="text-2xl font-semibold tracking-tight">Read next</h2>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {others.map((a) => (
+          <article class="reveal overflow-hidden rounded-2xl bg-card">
+            <a href={`/journal/${a.slug}/`} tabindex="-1" aria-hidden="true" class="block overflow-hidden">
+              <Picture
+                name={a.img}
+                alt={a.alt}
+                widths={[640, 800]}
+                sizes="(max-width: 768px) 100vw, 360px"
+                ratio="aspect-[16/10]"
+              />
+            </a>
+            <div class="p-5 sm:p-6">
+              <p class="text-xs text-grey">{a.date} · {a.readTime}</p>
+              <h3 class="mt-2 text-lg font-semibold leading-snug tracking-tight">
+                <a href={`/journal/${a.slug}/`} class="transition hover:text-grey">{a.title}</a>
+              </h3>
+              <p class="mt-2 text-sm leading-relaxed text-grey">{a.excerpt}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p class="mt-8">
+        <a href="/journal/" class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[13px] font-medium text-ink ring-1 ring-black/5 transition hover:bg-ink hover:text-white">
+          ← All articles
+        </a>
+      </p>
+    </section>
+  </article>
+</Layout>

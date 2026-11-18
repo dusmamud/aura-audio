@@ -1,0 +1,30 @@
+---
+/** Rating stars — filled gold stars clipped to the rating value. */
+interface Props {
+  rating: number;
+  reviewsCount?: number;
+  showCount?: boolean;
+  class?: string;
+}
+const { rating, reviewsCount, showCount = false, class: cls = '' } = Astro.props;
+const pct = Math.max(0, Math.min(100, (rating / 5) * 100));
+const star =
+  'M12 2.5l2.9 5.9 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3 1.2-6.5L2.5 9.3l6.6-.9L12 2.5Z';
+---
+<span class={`inline-flex items-center gap-1.5 ${cls}`} role="img" aria-label={`Rated ${rating} out of 5`}>
+  <span class="relative inline-flex shrink-0" aria-hidden="true">
+    <span class="flex gap-0.5 text-ink/20">
+      {[0, 1, 2, 3, 4].map(() => (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d={star} /></svg>
+      ))}
+    </span>
+    <span class="absolute inset-0 flex gap-0.5 overflow-hidden text-ink" style={`width: ${pct}%`}>
+      {[0, 1, 2, 3, 4].map(() => (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="shrink-0"><path d={star} /></svg>
+      ))}
+    </span>
+  </span>
+  {showCount && reviewsCount !== undefined && (
+    <span class="text-xs text-grey">{rating.toFixed(1)} ({reviewsCount})</span>
+  )}
+</span>

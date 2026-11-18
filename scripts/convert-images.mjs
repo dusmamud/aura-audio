@@ -25,6 +25,9 @@ const NAMES = {
   'media-generation-smartwatch-0-555bd9d2-a54e-4f3c-ae37-6db9c4ab5c77': 'smartwatch',
   'media-generation-speaker-0-c3ce2087-c515-4d55-8899-f162456f3cf7': 'speaker',
   'media-generation-charging-dock-0-f326b26d-29f0-4dbf-a2ca-4962557a99a9': 'charging-dock',
+  'media-generation-aura-home-speaker-0-a1994dbf-9850-41d2-ad56-2053ffd9f7b3': 'home-speaker',
+  'media-generation-aura-buds-pro-0-d7e382fe-9adf-4eb7-9723-f1cfbbc08fc1': 'buds-pro',
+  'media-generation-aura-travel-case-0-56270822-6324-43f4-90e9-ae58b3f68d95': 'travel-case',
 };
 // Source archive, not a delivery master — skip silently.
 const ARCHIVED = new Set(['media-generation-hero-headphones-0-a3375c0a-c21d-44a3-a564-47903a3e9ee2']);

@@ -1,0 +1,71 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { products, formatPrice } from '../data/site';
+
+const minPrice = Math.min(...products.map((p) => p.price));
+const maxRating = Math.max(...products.map((p) => p.rating));
+---
+<Layout
+  title="Compare — AURA"
+  description="Compare all AURA products side by side — price, rating, battery life, noise cancelling, Bluetooth and weight."
+>
+  <section class="mx-auto max-w-6xl px-4 pb-12 pt-24 sm:px-6 sm:pt-28" aria-labelledby="compare-heading">
+    <h1 id="compare-heading" class="text-3xl font-medium tracking-tight sm:text-4xl">Compare all products.</h1>
+    <p class="mt-2 text-sm text-grey">Every AURA product, side by side. The lowest price and the highest rating are highlighted.</p>
+
+    <div class="mt-8 overflow-x-auto rounded-2xl bg-card">
+      <table class="w-full min-w-[760px] border-collapse text-sm">
+        <thead>
+          <tr class="text-left">
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Product</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Price</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Rating</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Battery</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Noise cancelling</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Bluetooth</th>
+            <th scope="col" class="px-4 py-3 text-xs font-medium text-grey">Weight</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => (
+            <tr class="border-t border-black/5 align-middle">
+              <th scope="row" class="px-4 py-3 text-left font-normal">
+                <a href={`/products/${p.slug}/`} class="flex items-center gap-3">
+                  <img
+                    src={`/images/${p.img}-640.jpg`}
+                    alt={p.alt}
+                    width="64"
+                    height="64"
+                    loading="lazy"
+                    decoding="async"
+                    class="h-16 w-16 shrink-0 rounded-xl bg-card object-cover"
+                  />
+                  <span>
+                    <span class="block font-medium transition hover:underline">{p.name}</span>
+                    <span class="block text-xs text-grey">{p.category}</span>
+                  </span>
+                </a>
+              </th>
+              <td class="whitespace-nowrap px-4 py-3">
+                <span class={p.price === minPrice ? 'inline-block rounded-full bg-ink px-2 py-0.5 text-white' : ''}>
+                  {formatPrice(p.price)}
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <span class={p.rating === maxRating ? 'inline-block rounded-full bg-ink px-2 py-0.5 text-white' : ''}>
+                  {p.rating.toFixed(1)} / 5
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">{p.specs.battery}</td>
+              <td class="whitespace-nowrap px-4 py-3">{p.specs.anc}</td>
+              <td class="whitespace-nowrap px-4 py-3">{p.specs.bluetooth}</td>
+              <td class="whitespace-nowrap px-4 py-3">{p.specs.weight}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <p class="mt-3 text-xs text-grey">Battery figures are not directly comparable across categories (headphones vs. watch vs. case).</p>
+  </section>
+</Layout>

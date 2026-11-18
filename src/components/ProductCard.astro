@@ -1,0 +1,48 @@
+---
+import Picture from './Picture.astro';
+import Stars from './Stars.astro';
+import { formatPrice, type Product } from '../data/site';
+
+interface Props {
+  product: Product;
+}
+const { product: p } = Astro.props;
+---
+<article class="product-card flex flex-col rounded-2xl bg-card p-3 sm:p-4">
+  <div class="relative overflow-hidden rounded-xl bg-card">
+    <a href={`/products/${p.slug}/`} aria-label={p.name}>
+      <Picture
+        name={p.img}
+        alt={p.alt}
+        widths={[640, 800]}
+        sizes="(max-width: 768px) 50vw, 280px"
+        ratio="aspect-square"
+      />
+    </a>
+    {p.badge && (
+      <span class="absolute left-2 top-2 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink">
+        {p.badge}
+      </span>
+    )}
+  </div>
+  <h3 class="mt-3 text-sm font-medium">
+    <a href={`/products/${p.slug}/`} class="transition hover:underline">{p.name}</a>
+  </h3>
+  <p class="mt-0.5 text-xs text-grey">{p.tagline}</p>
+  <div class="mt-2">
+    <Stars rating={p.rating} reviewsCount={p.reviewsCount} showCount />
+  </div>
+  <p class="mt-2 text-sm font-medium">
+    {formatPrice(p.price)}
+    {p.compareAt && (
+      <span class="ml-2 font-normal text-grey line-through">{formatPrice(p.compareAt)}</span>
+    )}
+  </p>
+  <button
+    type="button"
+    data-add-to-bag={p.slug}
+    class="mt-3 w-full rounded-full bg-ink py-2.5 text-[13px] font-medium text-white transition hover:bg-ink-soft"
+  >
+    Add to bag
+  </button>
+</article>

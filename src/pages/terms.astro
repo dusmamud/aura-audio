@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+---
+<Layout
+  title="Terms of Service — AURA"
+  description="The terms for using the AURA demo store. All products, prices and orders are mock data."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Terms' }]} />
+  <section class="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6" aria-labelledby="terms-heading">
+    <h1 id="terms-heading" class="text-3xl font-semibold tracking-tight sm:text-4xl">Terms of Service</h1>
+    <p class="mt-2 text-sm text-grey">Last updated: November 2026. Mock terms for a demo store.</p>
+
+    <div class="mt-8 space-y-8 text-sm leading-relaxed text-ink-soft">
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">1. A demo store</h2>
+        <p class="mt-2">AURA is a demonstration store. All products, prices, reviews and articles are invented placeholders. Checkout is a mock flow: no payment is processed, no order is fulfilled and nothing is shipped. Do not enter real card details anywhere on this site.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">2. Prices and availability</h2>
+        <p class="mt-2">Prices shown are mock prices in US dollars and are not offers to sell. Products may be listed as available when they are not, and specifications may change without notice while the catalogue is being built.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">3. Returns and warranty (as presented)</h2>
+        <p class="mt-2">The store presents a 30-day return window and a 2-year warranty. Because no real orders exist, these cannot be exercised here; they describe the policy a live store would offer. Full details are on the <a href="/support/" class="font-medium text-ink underline underline-offset-2">Support page</a>.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">4. Content</h2>
+        <p class="mt-2">Product images on this site are AI-generated for demonstration. Journal articles are original mock editorial content. You may not reproduce the site's images or text for commercial use.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">5. Liability</h2>
+        <p class="mt-2">This site is provided as-is for demonstration, without warranties of any kind. We are not liable for any loss arising from reliance on mock prices, specifications or availability shown here.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">6. Contact</h2>
+        <p class="mt-2">Questions about these terms: <a href="mailto:hello@aura.audio" class="font-medium text-ink underline underline-offset-2">hello@aura.audio</a> (mock address).</p>
+      </section>
+    </div>
+  </section>
+</Layout>

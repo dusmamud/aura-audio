@@ -1,0 +1,155 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Picture from '../components/Picture.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import { products } from '../data/site';
+
+const flagship = products[0];
+
+const sections = [
+  {
+    num: '01',
+    title: 'Beryllium drivers',
+    stat: '40 mm',
+    statLabel: 'Beryllium driver',
+    body: 'The heart of AURA One is a 40 mm beryllium driver. Beryllium is one of the stiffest and lightest metals that can be formed into a diaphragm, so it starts and stops faster than conventional materials. The result is sound that stays close to the recording: tight, controlled bass, clear voices, and treble that sparkles without turning harsh.',
+    img: 'exploded-view',
+    alt: 'Exploded view of the AURA headphones — driver, magnet, circuit board and earcup shells',
+  },
+  {
+    num: '02',
+    title: 'Adaptive noise cancelling',
+    stat: '−42 dB',
+    statLabel: 'Adaptive noise cancelling',
+    body: 'Microphones on the outside of each earcup sample the world around you and compute its exact inverse, hundreds of times a second. AURA One adjusts its cancelling level 200 times per second, tightening on a busy street and relaxing in a quiet room, so the pressure never builds and the silence never feels forced.',
+    img: 'earcup-closeup',
+    alt: 'Macro close-up of the AURA headphone earcup — brushed aluminium, mesh fabric and USB-C port',
+  },
+  {
+    num: '03',
+    title: '60-hour battery',
+    stat: '60 h',
+    statLabel: 'Battery life with ANC on',
+    body: 'A full charge lasts 60 hours with noise cancelling on — a whole working week of listening, and then some. And when you do run low, a 10-minute USB-C top-up gives you 5 hours back, enough for a flight, a workday, or a long evening walk.',
+    img: 'lifestyle-desk',
+    alt: 'AURA headphones resting on a light desk next to their fabric carrying case',
+  },
+];
+
+const codecs = [
+  { label: 'Bluetooth', value: 'Bluetooth 5.4' },
+  { label: 'Connections', value: 'Multipoint — two devices at once' },
+  { label: 'Codecs', value: 'LDAC + AAC + SBC' },
+  { label: 'Audio', value: 'Hi-Res Audio' },
+];
+
+const specRows = [
+  { label: 'Driver', value: flagship.specs.driver },
+  { label: 'Battery life', value: flagship.specs.battery },
+  { label: 'Noise cancelling', value: flagship.specs.anc },
+  { label: 'Bluetooth', value: flagship.specs.bluetooth },
+  { label: 'Weight', value: flagship.specs.weight },
+  { label: 'Charging', value: flagship.specs.charging },
+];
+---
+<Layout
+  title="Technology — AURA"
+  description="How AURA One works: 40 mm beryllium drivers, adaptive noise cancelling up to −42 dB, 60-hour battery, Bluetooth 5.4 multipoint and Hi-Res Audio."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Technology' }]} />
+
+  <!-- HERO -->
+  <section class="mx-auto max-w-6xl px-4 pb-8 pt-8 sm:px-6 sm:pt-10" aria-labelledby="technology-heading">
+    <div class="reveal">
+      <p class="text-xs font-medium uppercase tracking-[0.2em] text-grey">Technology</p>
+      <h1 id="technology-heading" class="mt-4 max-w-2xl text-4xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+        Engineered, not decorated.
+      </h1>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-grey">
+        Every AURA product starts with the same question: what does the sound need?
+        No feature exists to fill a spec sheet. The driver, the noise cancelling and
+        the battery are all there to serve one thing — the music, heard properly.
+      </p>
+    </div>
+  </section>
+
+  <!-- 01 / 02 / 03 -->
+  {sections.map((s, i) => (
+    <section class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" aria-labelledby={`tech-${s.num}`}>
+      <div class="reveal grid items-center gap-6 md:grid-cols-2 md:gap-10">
+        <div class={i % 2 === 0 ? 'md:order-1' : 'md:order-2'}>
+          <div class="overflow-hidden rounded-2xl bg-card">
+            <Picture
+              name={s.img}
+              alt={s.alt}
+              sizes="(max-width: 768px) 100vw, 560px"
+              ratio="aspect-[16/10]"
+            />
+          </div>
+        </div>
+        <div class={i % 2 === 0 ? 'md:order-2' : 'md:order-1'}>
+          <p class="text-[2rem] font-light leading-none tracking-tight" aria-hidden="true">{s.num}</p>
+          <h2 id={`tech-${s.num}`} class="mt-4 text-2xl font-semibold leading-snug tracking-tight">{s.title}</h2>
+          <p class="mt-4 text-4xl font-light tracking-tight sm:text-5xl">{s.stat}</p>
+          <p class="mt-1 text-xs font-medium uppercase tracking-[0.15em] text-grey">{s.statLabel}</p>
+          <p class="mt-4 max-w-md text-sm leading-relaxed text-grey">{s.body}</p>
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <!-- CODECS & CONNECTION -->
+  <section class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10" aria-labelledby="codecs-heading">
+    <div class="reveal rounded-2xl bg-card p-6 sm:p-8">
+      <h2 id="codecs-heading" class="text-2xl font-semibold tracking-tight">Codecs &amp; connection</h2>
+      <p class="mt-2 max-w-xl text-sm leading-relaxed text-grey">
+        AURA One connects over Bluetooth 5.4 and stays connected to two devices at once,
+        so a call on your phone never means fumbling with your laptop.
+      </p>
+      <dl class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {codecs.map((c) => (
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-[0.15em] text-grey">{c.label}</dt>
+            <dd class="mt-2 text-base font-medium leading-snug">{c.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p class="mt-6 text-xs text-grey">Codec support shown is a demonstration specification.</p>
+    </div>
+  </section>
+
+  <!-- FLAGSHIP SPEC STRIP -->
+  <section class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10" aria-labelledby="specs-heading">
+    <div class="reveal">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h2 id="specs-heading" class="text-2xl font-semibold tracking-tight">AURA One at a glance</h2>
+        <a href="/products/aura-one/" class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-[13px] font-medium text-ink ring-1 ring-black/5 transition hover:bg-ink hover:text-white">
+          View AURA One
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" /></svg>
+        </a>
+      </div>
+      <dl class="mt-6 overflow-hidden rounded-2xl bg-card">
+        {specRows.map((row, i) => (
+          <div class={`grid grid-cols-[140px_1fr] gap-4 px-5 py-4 sm:grid-cols-[200px_1fr] sm:px-6 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+            <dt class="text-sm text-grey">{row.label}</dt>
+            <dd class="text-sm font-medium">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="mx-auto max-w-6xl px-4 pb-12 pt-2 sm:px-6" aria-labelledby="cta-heading">
+    <div class="reveal flex flex-col gap-6 rounded-[1.75rem] bg-[#ececea] px-6 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-12">
+      <div>
+        <h2 id="cta-heading" class="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">Hear what engineering sounds like.</h2>
+        <p class="mt-2 text-sm text-grey">AURA One — beryllium drivers, adaptive ANC, 60 hours of listening.</p>
+      </div>
+      <a href="/products/aura-one/" class="inline-flex shrink-0 items-center gap-3 self-start rounded-full bg-white px-5 py-3 text-[13px] font-medium text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition hover:bg-ink hover:text-white sm:self-auto">
+        Shop AURA One
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" /></svg>
+      </a>
+    </div>
+  </section>
+</Layout>

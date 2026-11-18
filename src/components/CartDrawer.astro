@@ -1,0 +1,43 @@
+---
+/**
+ * Cart drawer — fixed right panel + backdrop. Line items are rendered
+ * client-side by motion.ts from the cart store (localStorage), so the
+ * markup stays fresh on every page without a rebuild.
+ */
+import { formatPrice, FREE_SHIPPING_THRESHOLD } from '../data/site';
+---
+<div id="cart-backdrop" class="fixed inset-0 z-[90] hidden bg-ink/30 backdrop-blur-[2px]" data-close-cart aria-hidden="true"></div>
+<aside id="cart-drawer" class="fixed inset-y-0 right-0 z-[95] flex w-full max-w-md translate-x-full flex-col bg-white shadow-2xl transition-transform duration-300 ease-out" role="dialog" aria-modal="true" aria-label="Shopping bag" aria-hidden="true">
+  <div class="flex items-center justify-between border-b border-line px-5 py-4">
+    <h2 class="text-base font-semibold tracking-tight">Your Bag <span id="cart-drawer-count" class="text-grey"></span></h2>
+    <button type="button" data-close-cart aria-label="Close bag" class="grid h-10 w-10 place-items-center rounded-full transition hover:bg-ink/5">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div id="cart-shipping" class="border-b border-line px-5 py-3">
+    <p id="cart-shipping-text" class="text-xs text-ink-soft"></p>
+    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
+      <div id="cart-shipping-bar" class="h-full rounded-full bg-ink transition-[width] duration-500" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div id="cart-items" class="flex-1 overflow-y-auto px-5 py-4"></div>
+
+  <div id="cart-empty" class="hidden flex-1 flex-col items-center justify-center gap-3 px-5 py-10 text-center">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" class="text-grey" aria-hidden="true"><path d="M6 7h12l1 14H5L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+    <p class="text-sm font-medium">Your bag is empty.</p>
+    <p class="max-w-[240px] text-xs leading-relaxed text-grey">Beautiful sound is one click away. Start with our bestseller, AURA One.</p>
+    <a href="/products/" data-close-cart class="mt-1 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-[13px] font-medium text-white transition hover:bg-ink-soft">Shop bestsellers</a>
+  </div>
+
+  <div id="cart-footer" class="border-t border-line px-5 py-4">
+    <div class="flex items-center justify-between text-sm">
+      <span class="text-grey">Subtotal</span>
+      <span id="cart-subtotal" class="font-semibold">{formatPrice(0)}</span>
+    </div>
+    <p class="mt-1 text-[11px] leading-relaxed text-grey">Shipping and taxes calculated at checkout. Free shipping over {formatPrice(FREE_SHIPPING_THRESHOLD)}.</p>
+    <a href="/checkout/" class="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 text-sm font-medium text-white transition hover:bg-ink-soft">Checkout</a>
+    <button type="button" data-close-cart class="mt-2 w-full py-2 text-center text-xs font-medium text-ink-soft transition hover:text-ink">or continue shopping</button>
+  </div>
+</aside>

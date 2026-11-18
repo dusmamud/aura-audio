@@ -1,0 +1,52 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Picture from '../../components/Picture.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import { articles } from '../../data/site';
+---
+<Layout
+  title="Journal — AURA"
+  description="The AURA Journal: how noise cancelling works, why beryllium sounds different, and how to build a listening routine for your day."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Journal' }]} />
+
+  <!-- HERO -->
+  <section class="mx-auto max-w-6xl px-4 pb-8 pt-8 sm:px-6 sm:pt-10" aria-labelledby="journal-heading">
+    <div class="reveal">
+      <p class="text-xs font-medium uppercase tracking-[0.2em] text-grey">Journal</p>
+      <h1 id="journal-heading" class="mt-4 text-4xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+        Journal.
+      </h1>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-grey">
+        Short reads on sound, silence, and the engineering behind both —
+        written by the people who build AURA products.
+      </p>
+    </div>
+  </section>
+
+  <!-- ARTICLES -->
+  <section class="mx-auto max-w-6xl px-4 pb-12 pt-2 sm:px-6" aria-label="Journal articles">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {articles.map((a) => (
+        <article class="reveal overflow-hidden rounded-2xl bg-card">
+          <a href={`/journal/${a.slug}/`} tabindex="-1" aria-hidden="true" class="block overflow-hidden">
+            <Picture
+              name={a.img}
+              alt={a.alt}
+              widths={[640, 800]}
+              sizes="(max-width: 768px) 100vw, 360px"
+              ratio="aspect-[16/10]"
+            />
+          </a>
+          <div class="p-5 sm:p-6">
+            <p class="text-xs text-grey">{a.date} · {a.readTime}</p>
+            <h2 class="mt-2 text-lg font-semibold leading-snug tracking-tight">
+              <a href={`/journal/${a.slug}/`} class="transition hover:text-grey">{a.title}</a>
+            </h2>
+            <p class="mt-2 text-sm leading-relaxed text-grey">{a.excerpt}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+</Layout>

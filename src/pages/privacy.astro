@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+---
+<Layout
+  title="Privacy Policy — AURA"
+  description="How AURA handles your data. This is a demo store — nothing you enter leaves your browser."
+>
+  <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Privacy' }]} />
+  <section class="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6" aria-labelledby="privacy-heading">
+    <h1 id="privacy-heading" class="text-3xl font-semibold tracking-tight sm:text-4xl">Privacy Policy</h1>
+    <p class="mt-2 text-sm text-grey">Last updated: November 2026. Mock policy for a demo store.</p>
+
+    <div class="mt-8 space-y-8 text-sm leading-relaxed text-ink-soft">
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">1. What we collect</h2>
+        <p class="mt-2">This is a demonstration store. In the live demo, your bag is stored only in your own browser (localStorage) and nothing you type — not your email, address or payment details — is sent to any server. If this store ever goes live for real, this section will describe exactly what is collected, and why, before you are asked for it.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">2. Newsletter</h2>
+        <p class="mt-2">The newsletter form on this site is a mock: submitting it shows a confirmation message and sends nothing anywhere. A real newsletter would store your email only with your consent, and every email would include an unsubscribe link.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">3. Cookies and analytics</h2>
+        <p class="mt-2">This demo sets no tracking cookies and runs no analytics. Your browsing of this site is not recorded, profiled or shared.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">4. Third parties</h2>
+        <p class="mt-2">No personal data is shared with third parties, because no personal data leaves your device in this demo. Fonts are self-hosted; there are no third-party trackers on any page.</p>
+      </section>
+      <section>
+        <h2 class="text-lg font-semibold tracking-tight text-ink">5. Your rights and contact</h2>
+        <p class="mt-2">If this store goes live, you will be able to request a copy or deletion of your data at any time. For questions about this policy, write to <a href="mailto:hello@aura.audio" class="font-medium text-ink underline underline-offset-2">hello@aura.audio</a> (mock address).</p>
+      </section>
+    </div>
+  </section>
+</Layout>
