@@ -3,7 +3,7 @@ import { nav, site, announcements, products } from '../data/site';
 import CartDrawer from './CartDrawer.astro';
 
 // Search payload — read client-side by motion.ts, no extra fetch.
-const searchData = products.map((p) => ({ slug: p.slug, name: p.name, price: p.price, img: p.img, category: p.category, rating: p.rating }));
+const searchData = products.map((p) => ({ slug: p.slug, name: p.name, price: p.price, img: p.img, category: p.category, rating: p.rating, keywords: p.keywords }));
 ---
 <div class="fixed inset-x-0 top-0 z-50">
   <div class="bg-ink text-center text-[11px] font-medium tracking-wide text-white">

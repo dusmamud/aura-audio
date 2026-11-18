@@ -74,8 +74,8 @@ const jsonLd = {
     </div>
 
     <!-- NOT FOUND -->
-    <div id="track-notfound" class="hidden max-w-xl rounded-2xl bg-card p-6 text-center sm:p-8" role="status">
-      <p class="text-base font-medium">We couldn't find that order number in this demo store.</p>
+    <div id="track-notfound" class="hidden max-w-xl rounded-2xl bg-card p-6 text-center sm:p-8" role="alert">
+      <p id="track-notfound-msg" class="text-base font-medium">We couldn't find that order number in this demo store.</p>
       <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-grey">
         Check the number and try again — or try a demo order to see how tracking looks.
       </p>
@@ -101,7 +101,6 @@ const jsonLd = {
       { label: 'Delivered', offset: 5 },
     ];
     const DEMO_ORDER_NO = 'AUR-482913';
-    const ORDER_RE = /^AUR-\d{6}$/i;
 
     const form = document.getElementById('track-form') as HTMLFormElement | null;
     const input = document.getElementById('order-input') as HTMLInputElement | null;
@@ -125,8 +124,14 @@ const jsonLd = {
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    function showNotFound() {
+    function showNotFound(orderNo: string) {
       resultEl?.classList.add('hidden');
+      const msgEl = document.getElementById('track-notfound-msg');
+      if (msgEl) {
+        msgEl.textContent = orderNo
+          ? `We couldn't find order ${orderNo}. Check the number or try the demo order AUR-482913.`
+          : `We couldn't find that order number. Check the number or try the demo order AUR-482913.`;
+      }
       notFoundEl?.classList.remove('hidden');
     }
 
@@ -205,21 +210,22 @@ const jsonLd = {
     function lookup(orderNoRaw: string) {
       const orderNo = orderNoRaw.trim().toUpperCase();
       if (!orderNo) {
-        showNotFound();
+        showNotFound('');
         return;
       }
       const stored = findOrder(orderNo);
       let baseDate: Date | null = null;
       if (stored) {
         baseDate = new Date(stored.date);
-      } else if (ORDER_RE.test(orderNo)) {
-        // Demo fallback: derive a plausible order date from the digits.
-        const digits = orderNo.slice(4);
-        const daysAgo = (digits.split('').reduce((sum, ch) => sum + Number(ch), 0) % 6) + 1;
+      } else if (orderNo === DEMO_ORDER_NO) {
+        // Demo fallback: only the documented demo order gets a plausible
+        // timeline. Any other well-formed-but-unknown number is an error —
+        // inventing a shipment for it would mislead the visitor.
+        const daysAgo = 3;
         baseDate = addDays(startOfDay(new Date()), -daysAgo);
       }
       if (!baseDate || Number.isNaN(baseDate.getTime())) {
-        showNotFound();
+        showNotFound(orderNo);
         return;
       }
       if (orderLineEl) orderLineEl.textContent = `Order ${orderNo}`;

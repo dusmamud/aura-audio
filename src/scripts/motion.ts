@@ -29,6 +29,12 @@ declare global {
   interface Window {
     __auraGlobal?: boolean;
     __auraToastTimer?: number;
+    __auraAnnTimer?: number;
+    __auraValidate?: (
+      form: HTMLFormElement,
+      rules?: Record<string, FieldRule>,
+      afterForm?: boolean,
+    ) => boolean;
   }
 }
 
@@ -45,6 +51,114 @@ function showToast(msg: string) {
   window.clearTimeout(window.__auraToastTimer);
   window.__auraToastTimer = window.setTimeout(() => toast.classList.remove('show'), 2600);
 }
+
+// ---------- inline form validation ----------
+// Shows real inline errors (red message under the field, aria-invalid,
+// aria-describedby, focus on the first invalid field) instead of relying
+// on the browser's native bubble. Native `required` attributes stay as a
+// fallback layer; forms that use this helper carry `novalidate`.
+interface FieldRule {
+  test: (value: string) => boolean;
+  message: string;
+}
+
+const REQUIRED_MESSAGES: Record<string, string> = {
+  email: 'Enter your email address.',
+  name: 'Enter your full name.',
+  address: 'Enter your street address.',
+  city: 'Enter your city.',
+  pincode: 'Enter your 6-digit PIN code.',
+  message: 'Enter your message.',
+  card: 'Enter a demo card number.',
+};
+
+function fieldErrorEl(
+  form: HTMLFormElement,
+  field: HTMLInputElement | HTMLTextAreaElement,
+  afterForm: boolean,
+): HTMLParagraphElement {
+  const id = `${form.id || 'form'}-err-${field.name}`;
+  let el = document.getElementById(id) as HTMLParagraphElement | null;
+  if (!el) {
+    el = document.createElement('p');
+    el.id = id;
+    el.className = 'field-error';
+    if (afterForm) form.after(el);
+    else field.after(el);
+  }
+  return el;
+}
+
+function setFieldError(
+  form: HTMLFormElement,
+  field: HTMLInputElement | HTMLTextAreaElement,
+  message: string,
+  afterForm: boolean,
+): void {
+  const err = fieldErrorEl(form, field, afterForm);
+  err.textContent = message;
+  field.setAttribute('aria-invalid', 'true');
+  field.setAttribute('aria-describedby', err.id);
+}
+
+function clearFieldError(form: HTMLFormElement, field: HTMLInputElement | HTMLTextAreaElement): void {
+  const id = `${form.id || 'form'}-err-${field.name}`;
+  document.getElementById(id)?.remove();
+  field.removeAttribute('aria-invalid');
+  field.removeAttribute('aria-describedby');
+}
+
+function validateField(
+  field: HTMLInputElement | HTMLTextAreaElement,
+  rules: Record<string, FieldRule>,
+): string | null {
+  const value = field.value.trim();
+  if (field.hasAttribute('required') && !value) {
+    return REQUIRED_MESSAGES[field.name] ?? 'This field is required.';
+  }
+  if (value && field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return 'Enter a valid email address.';
+  }
+  const rule = rules[field.name];
+  if (rule && !rule.test(value)) return rule.message;
+  return null;
+}
+
+function validateForm(
+  form: HTMLFormElement,
+  rules: Record<string, FieldRule> = {},
+  afterForm = false,
+): boolean {
+  const fields = [
+    ...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input[name], textarea[name]'),
+  ];
+  let firstInvalid: (HTMLInputElement | HTMLTextAreaElement) | null = null;
+  for (const field of fields) {
+    const msg = validateField(field, rules);
+    if (msg) {
+      setFieldError(form, field, msg, afterForm);
+      firstInvalid ??= field;
+    } else {
+      clearFieldError(form, field);
+    }
+    // Clear the error live once the field becomes valid.
+    if (!field.dataset.validateWired) {
+      field.dataset.validateWired = '1';
+      field.addEventListener('input', () => {
+        if (!validateField(field, rules)) clearFieldError(form, field);
+      });
+    }
+  }
+  if (firstInvalid) {
+    firstInvalid.focus();
+    return false;
+  }
+  return true;
+}
+
+// Page inline scripts (checkout, contact) use this helper through the
+// window — their submit handlers run long after this module loads.
+window.__auraValidate = validateForm;
 
 // ---------- cart drawer ----------
 function renderCart() {
@@ -240,6 +354,7 @@ interface SearchEntry {
   img: string;
   category: string;
   rating: number;
+  keywords: string[];
 }
 
 function searchData(): SearchEntry[] {
@@ -248,6 +363,39 @@ function searchData(): SearchEntry[] {
   } catch {
     return [];
   }
+}
+
+// Fuzzy matching: normalise case/punctuation, match on name + category +
+// keywords, and tolerate one typo (edit distance <= 1) or a prefix, so
+// "budz" finds buds and "hedphones" finds headphones.
+const normToken = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 1) return 2;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function fuzzyMatch(query: string, haystack: string): boolean {
+  const q = normToken(query);
+  const h = normToken(haystack);
+  if (!q) return true;
+  if (h.includes(q)) return true;
+  const qTokens = q.split(' ');
+  const hTokens = h.split(' ');
+  return qTokens.every((qt) => hTokens.some((ht) => ht.startsWith(qt) || editDistance(qt, ht) <= 1));
 }
 
 function searchRow(p: SearchEntry): string {
@@ -270,9 +418,9 @@ function renderSearch(query: string) {
   const empty = $('#search-empty');
   if (!list || !label || !empty) return;
   const data = searchData();
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   const results = q
-    ? data.filter((p) => `${p.name} ${p.category}`.toLowerCase().includes(q)).slice(0, 6)
+    ? data.filter((p) => fuzzyMatch(q, `${p.name} ${p.category} ${p.keywords.join(' ')}`)).slice(0, 6)
     : [...data].sort((a, b) => b.rating - a.rating).slice(0, 4);
   list.innerHTML = results.map(searchRow).join('');
   label.textContent = q ? `${results.length} result${results.length === 1 ? '' : 's'}` : 'Popular right now';
@@ -331,6 +479,75 @@ function closeLightbox() {
   document.documentElement.style.overflow = '';
   lenis?.start();
   returnFocus('#pdp-gallery');
+}
+
+// ---------- PDP gallery: main image + thumbnails + per-colour galleries ----------
+// One place owns the gallery srcset swap, used by thumbnail clicks and by
+// the colour switch. sources[0] is AVIF, sources[1] is WebP (Picture.astro).
+function setGalleryImage(name: string, widths: number[]) {
+  const pic = $('#pdp-gallery');
+  const sources = pic?.querySelectorAll('source');
+  if (sources && sources.length >= 2) {
+    sources[0].setAttribute('srcset', widths.map((w) => `/images/${name}-${w}.avif ${w}w`).join(', '));
+    sources[1].setAttribute('srcset', widths.map((w) => `/images/${name}-${w}.webp ${w}w`).join(', '));
+  }
+  const img = pic?.querySelector('img');
+  if (img) {
+    const last = widths[widths.length - 1];
+    img.src = `/images/${name}-${last}.jpg`;
+    img.srcset = widths.map((w) => `/images/${name}-${w}.jpg ${w}w`).join(', ');
+  }
+}
+
+function renderPdpThumbs(images: string[]) {
+  const wrap = $('#pdp-thumbs');
+  if (!wrap) return;
+  const productName = document.querySelector('#pdp-heading')?.textContent?.trim() ?? 'Product';
+  wrap.innerHTML = images
+    .map(
+      (name, i) => `
+      <button type="button" data-gallery-thumb="${name}" aria-label="${productName} — view ${i + 1}" class="overflow-hidden rounded-xl bg-card ring-offset-2 ring-offset-mist transition hover:opacity-80">
+        <img src="/images/${name}-640.jpg" alt="${productName} — view ${i + 1}" width="72" height="72" loading="lazy" decoding="async" class="h-[72px] w-[72px] object-cover" />
+      </button>`,
+    )
+    .join('');
+  wrap.querySelectorAll('[data-gallery-thumb]').forEach((th, i) => {
+    th.classList.toggle('ring-2', i === 0);
+    th.classList.toggle('ring-ink', i === 0);
+  });
+}
+
+// Switch the PDP gallery to a colour's own images (data-galleries on
+// #pdp-gallery, rendered by [slug].astro from site.ts). Updates the main
+// image, the thumbnails, the lightbox first image and the sticky-bar thumb.
+function switchPdpGallery(color: string) {
+  const pic = $('#pdp-gallery');
+  if (!pic) return;
+  let galleries: Record<string, { images: string[]; widths: number[] }> = {};
+  try {
+    galleries = JSON.parse(pic.dataset.galleries ?? '{}') as typeof galleries;
+  } catch {
+    return;
+  }
+  const entry = galleries[color];
+  if (!entry || entry.images.length === 0) return;
+  pic.dataset.widths = entry.widths.join(',');
+  renderPdpThumbs(entry.images);
+  setGalleryImage(entry.images[0], entry.widths);
+  const img = pic.querySelector('img');
+  if (img) {
+    // Alt follows the colour ("Charcoal AURA One…") instead of keeping
+    // the previous colour's description.
+    const base = img.alt.replace(/^(Silver|Charcoal)\s+/i, '');
+    img.alt = `${color} ${base}`;
+  }
+  const lightboxImg = $('#pdp-lightbox-img') as HTMLImageElement | null;
+  if (lightboxImg) {
+    lightboxImg.src = `/images/${entry.images[0]}-800.jpg`;
+    lightboxImg.alt = img?.alt ?? lightboxImg.alt;
+  }
+  const stickyImg = document.querySelector<HTMLImageElement>('#pdp-sticky-bar img');
+  if (stickyImg) stickyImg.src = `/images/${entry.images[0]}-640.jpg`;
 }
 
 // ---------- scroll reveals + parallax (per page) ----------
@@ -546,10 +763,53 @@ function setupStickyBar() {
   update();
 }
 
+// ---------- announcement rotator + back-to-top ----------
+// ROOT CAUSE (Round 3): the rotator used to live in setupGlobal(), which
+// runs once. Its setInterval captured the first-load #announcement-text
+// node, but Astro's ClientRouter swaps the header on every navigation —
+// the interval kept updating a detached node (verified: it had cycled to
+// "2-year warranty…" while the visible bar stayed frozen on the first
+// message). So the rotator (re)binds on every page load via initPage(),
+// clearing the previous interval first. Same treatment for back-to-top:
+// its button is re-queried on every scroll instead of captured once.
+function setupAnnouncement() {
+  window.clearInterval(window.__auraAnnTimer);
+  const annEl = $('#announcement-text');
+  const messages: string[] = (() => {
+    try {
+      return JSON.parse(annEl?.dataset.messages ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  })();
+  if (annEl && messages.length > 1 && !reduced()) {
+    let i = 0;
+    window.__auraAnnTimer = window.setInterval(() => {
+      i = (i + 1) % messages.length;
+      annEl.style.opacity = '0';
+      window.setTimeout(() => {
+        annEl.textContent = messages[i];
+        annEl.style.opacity = '1';
+      }, 350);
+    }, 4000);
+  }
+}
+
+function updateBackToTop() {
+  $('#back-to-top')?.classList.toggle('show', window.scrollY > 600);
+}
+
+function scrollToTop() {
+  if (lenis) lenis.scrollTo(0, { immediate: reduced() });
+  else window.scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
+}
+
 // ---------- per-page init (runs on first load AND every view transition) ----------
 function initPage() {
   renderCart();
   renderWishlist();
+  setupAnnouncement();
+  updateBackToTop();
   setupReveals();
   setupAccordions();
   renderDeliveryEstimate();
@@ -638,6 +898,10 @@ function setupGlobal() {
       if (form.id === 'newsletter-form') {
         e.preventDefault();
         e.stopPropagation();
+        // Inline error under the form (the form is a tight flex pill —
+        // an error inside it would break the layout). The helper places
+        // the message after the form element.
+        if (!validateForm(form, {}, true)) return;
         form.reset();
         showToast('Thanks for subscribing — welcome to AURA.');
       }
@@ -679,36 +943,13 @@ function setupGlobal() {
     }
   });
 
-  // Announcement rotator.
-  const annEl = $('#announcement-text');
-  const messages: string[] = (() => {
-    try {
-      return JSON.parse(annEl?.dataset.messages ?? '[]') as string[];
-    } catch {
-      return [];
-    }
-  })();
-  if (annEl && messages.length > 1 && !reduced()) {
-    let i = 0;
-    window.setInterval(() => {
-      i = (i + 1) % messages.length;
-      annEl.style.opacity = '0';
-      window.setTimeout(() => {
-        annEl.textContent = messages[i];
-        annEl.style.opacity = '1';
-      }, 350);
-    }, 4000);
-  }
-
-  // Back-to-top visibility.
-  const toTop = $('#back-to-top');
-  const onScroll = () => toTop?.classList.toggle('show', window.scrollY > 600);
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
-  toTop?.addEventListener('click', () => {
-    if (lenis) lenis.scrollTo(0, { immediate: reduced() });
-    else window.scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
-  });
+  // Back-to-top visibility — the button is re-queried on every scroll
+  // (updateBackToTop) because view transitions replace it; a captured
+  // node would go stale after the first navigation, like the announcement
+  // rotator did. The click is handled by the delegated click listener
+  // below, which survives navigation.
+  window.addEventListener('scroll', updateBackToTop, { passive: true });
+  updateBackToTop();
 
   // Delegated clicks — survives view transitions (document persists).
   document.addEventListener('click', (e) => {
@@ -720,6 +961,10 @@ function setupGlobal() {
       const panel = $('#mobile-menu');
       const open = panel?.classList.toggle('hidden') === false;
       menuBtn.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    if (closest('#back-to-top')) {
+      scrollToTop();
       return;
     }
     if (closest('#mobile-menu a')) {
@@ -804,7 +1049,7 @@ function setupGlobal() {
       const qtyEl = $('#pdp-qty');
       const qty = qtyEl ? Math.max(1, Number(qtyEl.textContent) || 1) : 1;
       const color =
-        document.querySelector<HTMLElement>('[data-color-btn][aria-pressed="true"]')?.dataset.color ??
+        document.querySelector<HTMLElement>('[data-color-btn][aria-pressed="true"]')?.dataset.colorBtn ??
         product.colors[0];
       addToCart(slug, qty, color);
       showToast(`${product.name} added to your bag.`);
@@ -822,7 +1067,7 @@ function setupGlobal() {
       const qtyEl = $('#pdp-qty');
       const qty = qtyEl ? Math.max(1, Number(qtyEl.textContent) || 1) : 1;
       const color =
-        document.querySelector<HTMLElement>('[data-color-btn][aria-pressed="true"]')?.dataset.color ??
+        document.querySelector<HTMLElement>('[data-color-btn][aria-pressed="true"]')?.dataset.colorBtn ??
         product.colors[0];
       addToCart(slug, qty, color);
       window.location.href = '/checkout/';
@@ -861,8 +1106,10 @@ function setupGlobal() {
     if (colorBtn) {
       document.querySelectorAll('[data-color-btn]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
       colorBtn.setAttribute('aria-pressed', 'true');
+      const color = colorBtn.dataset.colorBtn ?? '';
       const nameEl = $('#selected-color-name');
-      if (nameEl) nameEl.textContent = colorBtn.dataset.color ?? '';
+      if (nameEl) nameEl.textContent = color;
+      switchPdpGallery(color);
       return;
     }
 
@@ -883,19 +1130,10 @@ function setupGlobal() {
     if (thumb) {
       const name = thumb.dataset.galleryThumb ?? '';
       const pic = $('#pdp-gallery');
-      const widths = (pic?.dataset.widths ?? '640,800,1280').split(',');
-      const sources = pic?.querySelectorAll('source');
-      if (sources && sources.length >= 2) {
-        sources[0].setAttribute('srcset', widths.map((w) => `/images/${name}-${w}.avif ${w}w`).join(', '));
-        sources[1].setAttribute('srcset', widths.map((w) => `/images/${name}-${w}.webp ${w}w`).join(', '));
-      }
+      const widths = (pic?.dataset.widths ?? '640,800,1280').split(',').map(Number);
+      setGalleryImage(name, widths);
       const img = pic?.querySelector('img');
-      if (img) {
-        const last = widths[widths.length - 1];
-        img.src = `/images/${name}-${last}.jpg`;
-        img.srcset = widths.map((w) => `/images/${name}-${w}.jpg ${w}w`).join(', ');
-        img.alt = thumb.querySelector('img')?.alt ?? img.alt;
-      }
+      if (img) img.alt = thumb.querySelector('img')?.alt ?? img.alt;
       document.querySelectorAll('[data-gallery-thumb]').forEach((th) => {
         th.classList.remove('ring-2', 'ring-ink');
       });

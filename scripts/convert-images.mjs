@@ -28,6 +28,8 @@ const NAMES = {
   'media-generation-aura-home-speaker-0-a1994dbf-9850-41d2-ad56-2053ffd9f7b3': 'home-speaker',
   'media-generation-aura-buds-pro-0-d7e382fe-9adf-4eb7-9723-f1cfbbc08fc1': 'buds-pro',
   'media-generation-aura-travel-case-0-56270822-6324-43f4-90e9-ae58b3f68d95': 'travel-case',
+  'media-generation-hero-headphones-charcoal-0-80f88b7e-c29e-4784-9de2-f8eaac9d6e24': 'hero-headphones-charcoal',
+  'media-generation-earcup-closeup-charcoal-0-f30cd004-c4e5-490d-95a6-444f10bc8c1b': 'earcup-closeup-charcoal',
 };
 // Source archive, not a delivery master — skip silently.
 const ARCHIVED = new Set(['media-generation-hero-headphones-0-a3375c0a-c21d-44a3-a564-47903a3e9ee2']);

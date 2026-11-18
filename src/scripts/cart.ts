@@ -1,6 +1,6 @@
 // Client-side cart store. localStorage only — no server, no checkout
 // backend. All prices are mock data from src/data/site.ts.
-import { products, getProduct, FREE_SHIPPING_THRESHOLD } from '../data/site';
+import { products, getProduct, imageFor, FREE_SHIPPING_THRESHOLD } from '../data/site';
 
 export { FREE_SHIPPING_THRESHOLD };
 
@@ -71,7 +71,7 @@ export function getResolvedLines(): CartLineResolved[] {
     .map((l) => {
       const p = getProduct(l.slug);
       if (!p) return null;
-      return { ...l, name: p.name, price: p.price, img: p.img, alt: p.alt, lineTotal: p.price * l.qty };
+      return { ...l, name: p.name, price: p.price, img: imageFor(p, l.color), alt: p.alt, lineTotal: p.price * l.qty };
     })
     .filter((l): l is CartLineResolved => l !== null);
 }

@@ -14,9 +14,9 @@ const columns = [
       <div>
         <h2 class="text-xl font-semibold tracking-tight">Join the listening list.</h2>
         <p class="mt-2 max-w-[300px] text-sm leading-relaxed text-grey">New drops, listening guides and members-only offers. One email a month — no spam, ever.</p>
-        <form id="newsletter-form" class="mt-4 flex max-w-[340px] items-center gap-2 rounded-full bg-white p-1.5 ring-1 ring-black/5 focus-within:ring-ink/30">
+        <form id="newsletter-form" novalidate class="mt-4 flex max-w-[340px] items-center gap-2 rounded-full bg-white p-1.5 ring-1 ring-black/5 focus-within:ring-ink/30">
           <label for="newsletter-email" class="sr-only">Email address</label>
-          <input id="newsletter-email" type="email" required placeholder="you@example.com" class="w-full min-w-0 bg-transparent px-3 text-sm outline-none placeholder:text-grey" />
+          <input id="newsletter-email" name="email" type="email" required placeholder="you@example.com" class="w-full min-w-0 bg-transparent px-3 text-sm outline-none placeholder:text-grey" />
           <button type="submit" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-ink-soft">Subscribe</button>
         </form>
         <p class="mt-2 text-[11px] text-grey">Mock demo — no emails are sent or stored.</p>

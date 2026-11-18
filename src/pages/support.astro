@@ -108,7 +108,7 @@ const cards = [
         </p>
       </div>
       <div>
-        <form id="contact-form" class="rounded-2xl bg-card p-6 sm:p-8">
+        <form id="contact-form" novalidate class="rounded-2xl bg-card p-6 sm:p-8">
           <div>
             <label for="contact-name" class="text-sm font-medium">Name</label>
             <input id="contact-name" name="name" type="text" required autocomplete="name" class="mt-2 w-full rounded-full bg-white px-4 py-3 text-sm text-ink ring-1 ring-black/5 outline-none transition focus:ring-2 focus:ring-ink" />
@@ -151,9 +151,28 @@ const cards = [
   </section>
 
   <script>
-    const form = document.getElementById('contact-form');
+    // Inline validation helper from motion.ts — resolved at CALL time, not
+    // at module-eval time (see checkout.astro: this page's module can
+    // evaluate before Layout's motion.ts module sets window.__auraValidate).
+    type ValidateFn = (
+      form: HTMLFormElement,
+      rules?: Record<string, { test: (v: string) => boolean; message: string }>,
+      afterForm?: boolean,
+    ) => boolean;
+    const getValidateForm = () =>
+      (window as unknown as { __auraValidate?: ValidateFn }).__auraValidate;
+    const form = document.getElementById('contact-form') as HTMLFormElement | null;
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
+      // Inline errors under each invalid field; the form carries novalidate
+      // so the native bubble never appears.
+      const validateForm = getValidateForm();
+      if (validateForm) {
+        if (!validateForm(form)) return;
+      } else if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
       form.classList.add('hidden');
       document.getElementById('contact-success')?.classList.remove('hidden');
     });

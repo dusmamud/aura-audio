@@ -72,6 +72,7 @@ export type Category = 'Headphones' | 'Earbuds' | 'Wearables' | 'Speakers' | 'Ac
 export interface Product {
   slug: string;
   name: string;
+  type: string; // short product type, used in SEO titles: "AURA One Over-Ear Headphones"
   tagline: string;
   price: number;
   compareAt?: number;
@@ -85,11 +86,23 @@ export interface Product {
   inBox: string[];
   specs: { driver: string; battery: string; anc: string; bluetooth: string; weight: string; charging: string };
   gallery: string[];
+  // Per-colour galleries — when present, the key is a colour name and the
+  // value is that colour's gallery. The default gallery is the first
+  // colour's. Only products with real colour variants define this.
+  galleries?: Record<string, string[]>;
+  // Search keywords (fuzzy search matches name + category + these).
+  keywords: string[];
   img: string;
   alt: string;
   description: string;
   features: string[];
 }
+
+// Gallery for a colour: the colour's own gallery when defined, else the default.
+export const galleryFor = (p: Product, color: string): string[] =>
+  p.galleries?.[color] ?? p.gallery;
+// First image of a colour's gallery — used for cart lines, sticky bar, etc.
+export const imageFor = (p: Product, color: string): string => galleryFor(p, color)[0] ?? p.img;
 
 export const categories: Category[] = ['Headphones', 'Earbuds', 'Wearables', 'Speakers', 'Accessories'];
 
@@ -97,6 +110,7 @@ export const products: Product[] = [
   {
     slug: 'aura-one',
     name: 'AURA One',
+    type: 'Over-Ear Headphones',
     tagline: 'Our flagship over-ear headphones.',
     price: 349,
     compareAt: 399,
@@ -116,6 +130,11 @@ export const products: Product[] = [
       charging: 'USB-C · 10 min = 5 h',
     },
     gallery: ['hero-headphones', 'earcup-closeup', 'exploded-view', 'lifestyle-desk'],
+    galleries: {
+      Silver: ['hero-headphones', 'earcup-closeup', 'exploded-view', 'lifestyle-desk'],
+      Charcoal: ['hero-headphones-charcoal', 'earcup-closeup-charcoal', 'exploded-view', 'lifestyle-desk'],
+    },
+    keywords: ['headphones', 'over-ear', 'overear', 'anc', 'noise cancelling', 'flagship', 'wireless', 'bluetooth', 'beryllium', 'headphone'],
     img: 'hero-headphones',
     alt: 'Silver AURA One over-ear headphones',
     description:
@@ -131,6 +150,7 @@ export const products: Product[] = [
   {
     slug: 'aura-buds',
     name: 'Wireless Earbuds',
+    type: 'Wireless Earbuds',
     tagline: 'Big sound, pocket size.',
     price: 199,
     category: 'Earbuds',
@@ -148,6 +168,7 @@ export const products: Product[] = [
       charging: 'USB-C + wireless',
     },
     gallery: ['earbuds'],
+    keywords: ['earbuds', 'buds', 'wireless', 'in-ear', 'anc', 'noise cancelling', 'bluetooth', 'earbud'],
     img: 'earbuds',
     alt: 'White AURA wireless earbuds in their open charging case',
     description:
@@ -163,6 +184,7 @@ export const products: Product[] = [
   {
     slug: 'aura-watch',
     name: 'Smart Watch',
+    type: 'Smart Watch',
     tagline: 'Time, health and sound on your wrist.',
     price: 299,
     category: 'Wearables',
@@ -181,6 +203,7 @@ export const products: Product[] = [
       charging: 'Magnetic puck',
     },
     gallery: ['smartwatch'],
+    keywords: ['watch', 'smartwatch', 'smart watch', 'fitness', 'health', 'wearable', 'watch'],
     img: 'smartwatch',
     alt: 'Silver AURA smartwatch with a black watch face',
     description:
@@ -196,6 +219,7 @@ export const products: Product[] = [
   {
     slug: 'aura-speaker',
     name: 'Portable Speaker',
+    type: 'Portable Speaker',
     tagline: 'Room-filling sound, wherever you go.',
     price: 149,
     category: 'Speakers',
@@ -213,6 +237,7 @@ export const products: Product[] = [
       charging: 'USB-C',
     },
     gallery: ['speaker'],
+    keywords: ['speaker', 'portable', 'bluetooth speaker', 'wireless', 'outdoor', 'room'],
     img: 'speaker',
     alt: 'Light grey fabric AURA portable speaker',
     description:
@@ -228,6 +253,7 @@ export const products: Product[] = [
   {
     slug: 'aura-dock',
     name: 'Charging Dock',
+    type: 'Charging Dock',
     tagline: 'One dock for everything AURA.',
     price: 99,
     category: 'Accessories',
@@ -246,6 +272,7 @@ export const products: Product[] = [
       charging: 'USB-C in · 15 W out',
     },
     gallery: ['charging-dock'],
+    keywords: ['dock', 'charging', 'charger', 'stand', 'wireless charging', 'desk'],
     img: 'charging-dock',
     alt: 'AURA charging dock holding a smartphone upright',
     description:
@@ -260,6 +287,7 @@ export const products: Product[] = [
   {
     slug: 'aura-home',
     name: 'AURA Home',
+    type: 'Smart Speaker',
     tagline: 'A smart speaker for the whole room.',
     price: 249,
     category: 'Speakers',
@@ -278,6 +306,7 @@ export const products: Product[] = [
       charging: 'Mains',
     },
     gallery: ['home-speaker'],
+    keywords: ['speaker', 'home', 'smart speaker', 'smart home', 'voice', 'room'],
     img: 'home-speaker',
     alt: 'AURA Home smart speaker in light grey fabric with an aluminium base',
     description:
@@ -292,6 +321,7 @@ export const products: Product[] = [
   {
     slug: 'aura-buds-pro',
     name: 'AURA Buds Pro',
+    type: 'Wireless Earbuds',
     tagline: 'Studio sound in your pocket.',
     price: 249,
     compareAt: 279,
@@ -311,6 +341,7 @@ export const products: Product[] = [
       charging: 'USB-C + wireless',
     },
     gallery: ['buds-pro'],
+    keywords: ['earbuds', 'buds', 'buds pro', 'pro', 'wireless', 'in-ear', 'anc', 'noise cancelling', 'bluetooth', 'earbud', 'studio'],
     img: 'buds-pro',
     alt: 'AURA Buds Pro wireless earbuds floating above their open charging case',
     description:
@@ -326,6 +357,7 @@ export const products: Product[] = [
   {
     slug: 'aura-case',
     name: 'AURA Travel Case',
+    type: 'Travel Case',
     tagline: 'Your headphones, first class.',
     price: 79,
     category: 'Accessories',
@@ -343,6 +375,7 @@ export const products: Product[] = [
       charging: '—',
     },
     gallery: ['travel-case'],
+    keywords: ['case', 'travel', 'carrying case', 'bag', 'protection', 'headphones case'],
     img: 'travel-case',
     alt: 'AURA Travel Case in light grey woven fabric with a zipper and leather pull',
     description:

@@ -138,6 +138,18 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
     const flowEl = document.getElementById('checkout-flow');
     const successEl = document.getElementById('checkout-success');
 
+    // Inline validation helper from motion.ts — resolved at CALL time, not
+    // at module-eval time: this page's module can evaluate before Layout's
+    // motion.ts module sets window.__auraValidate, which left the captured
+    // value undefined and silently fell back to native reportValidity().
+    type ValidateFn = (
+      form: HTMLFormElement,
+      rules?: Record<string, { test: (v: string) => boolean; message: string }>,
+      afterForm?: boolean,
+    ) => boolean;
+    const getValidateForm = () =>
+      (window as unknown as { __auraValidate?: ValidateFn }).__auraValidate;
+
     if (lines.length === 0) {
       emptyEl?.classList.remove('hidden');
       flowEl?.classList.add('hidden');
@@ -190,8 +202,16 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
       };
       step1?.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (!step1.checkValidity()) {
-          step1.reportValidity();
+        // Inline errors under each invalid field (PIN code must be 6 digits);
+        // the form carries novalidate so the native bubble never appears.
+        const validateForm = getValidateForm();
+        const ok = validateForm
+          ? validateForm(step1, {
+              pincode: { test: (v) => /^\d{6}$/.test(v), message: 'Enter a 6-digit PIN code.' },
+            })
+          : step1.checkValidity();
+        if (!ok) {
+          if (!validateForm) step1.reportValidity();
           return;
         }
         step1.classList.add('hidden');
@@ -215,9 +235,20 @@ import Breadcrumbs from '../components/Breadcrumbs.astro';
         e.preventDefault();
         const pay = (document.querySelector('input[name="pay"]:checked') as HTMLInputElement)?.value;
         if (pay === 'card') {
-          const card = (step2.querySelector('input[name="card"]') as HTMLInputElement)?.value.trim();
+          const cardInput = step2.querySelector('input[name="card"]') as HTMLInputElement | null;
+          const card = cardInput?.value.trim() ?? '';
           if (!card) {
-            (step2.querySelector('input[name="card"]') as HTMLInputElement)?.focus();
+            const validateForm = getValidateForm();
+            if (validateForm) {
+              validateForm(step2, {
+                card: {
+                  test: (v) => v.trim().length > 0,
+                  message: 'Enter a demo card number — try 4242 4242 4242 4242.',
+                },
+              });
+            } else {
+              cardInput?.focus();
+            }
             return;
           }
         }
