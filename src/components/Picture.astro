@@ -1,0 +1,43 @@
+---
+/**
+ * Responsive picture — AVIF first, WebP second, JPG fallback, PNG master.
+ * Order matters: the browser takes the first <source> type it supports.
+ * A <picture> with no <img> renders nothing, so <img> is mandatory.
+ * `widths` are the generated widths; `sizes` must match the layout.
+ */
+interface Props {
+  name: string; // base name under /images/, e.g. "hero-headphones"
+  alt: string;
+  widths?: number[];
+  sizes: string;
+  ratio?: string; // aspect-ratio class applied to the <img>
+  eager?: boolean;
+  width?: number;
+  height?: number;
+  imgClass?: string;
+}
+const {
+  name, alt, sizes, ratio = '', eager = false,
+  widths = [640, 800, 1280],
+  width = 1920, height = 1280, imgClass = '',
+} = Astro.props;
+const srcset = (ext: string) =>
+  widths.map((w) => `/images/${name}-${w}.${ext} ${w}w`).join(', ');
+const fallback = `/images/${name}-${widths[widths.length - 1]}.jpg`;
+---
+<picture class="contents">
+  <source type="image/avif" srcset={srcset('avif')} sizes={sizes} />
+  <source type="image/webp" srcset={srcset('webp')} sizes={sizes} />
+  <img
+    src={fallback}
+    srcset={srcset('jpg')}
+    sizes={sizes}
+    alt={alt}
+    width={width}
+    height={height}
+    loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : undefined}
+    decoding="async"
+    class={`${ratio} w-full object-cover ${imgClass}`}
+  />
+</picture>

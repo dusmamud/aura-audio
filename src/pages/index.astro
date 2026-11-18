@@ -1,0 +1,110 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Picture from '../components/Picture.astro';
+import { site, features, products } from '../data/site';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'AURA products',
+  itemListElement: products.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Product',
+      name: p.name,
+      image: `${site.url}/images/${p.img}-1280.jpg`,
+      offers: { '@type': 'Offer', price: p.price.replace('$', ''), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+    },
+  })),
+};
+---
+<Layout
+  title="AURA — Crafted for Focus. Designed for Life."
+  description="AURA is a premium audio brand. Over-ear headphones, wireless earbuds, smartwatch, portable speaker and charging dock — crafted for focus, designed for life."
+  jsonLd={jsonLd}
+>
+  <!-- HERO -->
+  <section class="mx-auto max-w-6xl px-4 pb-10 pt-24 sm:px-6 sm:pt-32" aria-labelledby="hero-heading">
+    <div class="grid items-center gap-8 md:grid-cols-2 md:gap-6">
+      <div data-hero>
+        <h1 id="hero-heading" class="text-[2.9rem] font-medium leading-[1.04] tracking-[-0.03em] sm:text-6xl lg:text-[4.4rem]">
+          Crafted<br />for Focus.<br /><span class="text-[#a9a9a4]">Designed<br />for Life.</span>
+        </h1>
+        <a href="#products" class="mt-7 inline-flex items-center gap-3 rounded-full bg-white px-5 py-3 text-[13px] font-medium text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition hover:bg-ink hover:text-white">
+          Explore the Experience
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+        </a>
+      </div>
+      <div data-hero data-parallax class="overflow-hidden rounded-2xl md:rounded-none">
+        <Picture
+          name="hero-headphones"
+          alt="Silver AURA over-ear headphones on a light grey background"
+          widths={[640, 800, 1280, 1600]}
+          sizes="(max-width: 768px) 100vw, 560px"
+          ratio="aspect-[3/2] md:aspect-[4/3]"
+          eager
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 / 02 / 03 -->
+  {features.map((f, i) => (
+    <section id={f.id} class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8" aria-labelledby={`feature-${f.num}`}>
+      <div class="reveal grid items-center gap-6 md:grid-cols-2 md:gap-10">
+        <div class={i % 2 === 0 ? 'md:order-1' : 'md:order-2'}>
+          <div class="overflow-hidden rounded-2xl bg-card">
+            <Picture
+              name={f.img}
+              alt={f.alt}
+              sizes="(max-width: 768px) 100vw, 560px"
+              ratio={f.ratio}
+            />
+          </div>
+        </div>
+        <div class={i % 2 === 0 ? 'md:order-2' : 'md:order-1'}>
+          <p class="text-[2rem] font-light leading-none tracking-tight" aria-hidden="true">{f.num}</p>
+          <h2 id={`feature-${f.num}`} class="mt-4 whitespace-pre-line text-2xl font-semibold leading-snug tracking-tight">{f.title}</h2>
+          <p class="mt-3 max-w-[300px] text-sm leading-relaxed text-grey">{f.body}</p>
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <!-- PRODUCTS -->
+  <section id="products" class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10" aria-labelledby="products-heading">
+    <h2 id="products-heading" class="sr-only">Products</h2>
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {products.map((p) => (
+        <article class="product-card reveal rounded-2xl bg-card p-3 sm:p-4">
+          <div class="overflow-hidden rounded-xl">
+            <Picture
+              name={p.img}
+              alt={p.alt}
+              widths={[640, 800]}
+              sizes="(max-width: 768px) 50vw, 280px"
+              ratio="aspect-square"
+            />
+          </div>
+          <h3 class="mt-3 text-center text-xs font-medium sm:text-sm">{p.name}</h3>
+          <p class="mt-0.5 text-center text-xs text-grey sm:text-sm">{p.price}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- STORY / CTA BANNER -->
+  <section id="story" class="mx-auto max-w-6xl px-4 pb-12 pt-2 sm:px-6" aria-labelledby="story-heading">
+    <div class="reveal flex flex-col gap-6 rounded-[1.75rem] bg-[#ececea] px-6 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-12">
+      <div>
+        <h2 id="story-heading" class="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">Sound that Inspires.<br />Design that Lasts.</h2>
+        <p class="mt-2 text-sm text-grey">Join the future of premium audio.</p>
+      </div>
+      <a href="#products" class="inline-flex shrink-0 items-center gap-3 self-start rounded-full bg-white px-5 py-3 text-[13px] font-medium text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition hover:bg-ink hover:text-white sm:self-auto">
+        Discover More
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+  </section>
+</Layout>
