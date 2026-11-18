@@ -4,7 +4,7 @@ import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   output: 'static',
-  site: 'https://aura-audio.pages.dev',
+  site: 'https://auraaudioo.pages.dev',
   // Cloudflare Pages enforces a trailing slash on directory builds (308
   // otherwise); keep config + canonicals + sitemap + internal links aligned.
   trailingSlash: 'always',

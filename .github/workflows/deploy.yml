@@ -24,12 +24,12 @@ jobs:
       - name: Build
         run: npm run build
       - name: Create Pages project if missing
-        run: npx wrangler pages project create aura-audio --production-branch main || true
+        run: npx wrangler pages project create auraaudioo --production-branch main || true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy dist to Cloudflare Pages
-        run: npx wrangler pages deploy dist --project-name=aura-audio --commit-dirty=true
+        run: npx wrangler pages deploy dist --project-name=auraaudioo --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

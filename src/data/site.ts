@@ -3,7 +3,7 @@
 export const site = {
   name: 'AURA',
   tagline: 'Crafted for Focus. Designed for Life.',
-  url: 'https://aura-audio.pages.dev',
+  url: 'https://auraaudioo.pages.dev',
   description:
     'AURA is a premium audio brand — over-ear headphones, wireless earbuds, smartwatch, portable speaker and charging dock. Crafted for focus, designed for life.',
   year: 2026,

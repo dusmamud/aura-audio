@@ -45,13 +45,13 @@ npm run preview
 ## Deploy
 
 Every push to `main` runs `.github/workflows/deploy.yml` (build +
-`wrangler pages deploy dist --project-name=aura-audio`). It needs these two
+`wrangler pages deploy dist --project-name=auraaudioo`). It needs these two
 repository secrets:
 
 - `CLOUDFLARE_API_TOKEN` — custom API token with **Account → Cloudflare Pages → Edit**
 - `CLOUDFLARE_ACCOUNT_ID` — your Cloudflare account ID
 
-Live URL (after the first successful deploy): https://aura-audio.pages.dev
+Live URL (after the first successful deploy): https://auraaudioo.pages.dev
 
 ## Notes
 
